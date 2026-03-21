@@ -3,6 +3,7 @@ const session = require('express-session');
 const path = require('path');
 const express = require('express');
 const app = express();
+const bcrypt = require('bcrypt');
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
@@ -105,21 +106,28 @@ function logAction(req, action, allowed) {
 }
 
 const USERS = {
-  Tony:  { password: 'SuperShrimp',  role: 'admin' },
-  Charlene:   { password: 'Shrimp',   role: 'user' },
-  Demo: { password: 'Demo', role: 'viewer' }
+  Tony:  { passwordHash: '$2b$10$b9qLrKuC5NZHmdiBKIjBIOPjxGlwtEqQkknqploNerNSvdf6Xox7S',  role: 'admin' },
+  Charlene:   { passwordHash: '$2b$10$OBs/Qon8NhNtc0qy4R7R1.kmzlbrDiamcPLD8HvtwI8CCiJwXOja.',   role: 'user' },
+  Demo: { passwordHash: '$2b$10$Dtso74uY2hRXv/NpLvq4gOSHODQco7Ekg2gWoxmPR4r7P85cdTSPG', role: 'viewer' }
 };
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
+  const account = USERS[username];
 
-  if (!USERS[username] || USERS[username].password !== password) {
+  if (!account) {
+    return res.send('Invalid login');
+  }
+
+  const match = await bcrypt.compare(password, account.passwordHash);
+
+  if (!match) {
     return res.send('Invalid login');
   }
 
   req.session.user = {
     username,
-    role: USERS[username].role
+    role: account.role
   };
 
   res.redirect('/');
