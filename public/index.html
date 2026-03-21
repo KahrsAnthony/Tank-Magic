@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tank Magic</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      color: white;
+      background:
+        linear-gradient(rgba(20, 24, 38, 0.55), rgba(20, 24, 38, 0.8)),
+        url('https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1400&q=80');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .panel {
+      width: 90%;
+      max-width: 430px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.10);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 24px;
+      padding: 28px 22px;
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      margin: 0 0 22px 0;
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    button {
+      width: 100%;
+      padding: 18px;
+      margin: 10px 0;
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+    }
+
+    button:hover {
+      transform: scale(1.03);
+      opacity: 0.95;
+    }
+
+    .rain {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      box-shadow: 0 0 18px rgba(96, 165, 250, 0.45);
+    }
+
+    .feed {
+      background: linear-gradient(135deg, #34d399, #10b981);
+      box-shadow: 0 0 18px rgba(52, 211, 153, 0.45);
+    }
+
+    .noise {
+      background: linear-gradient(135deg, #f9a8d4, #ec4899);
+      box-shadow: 0 0 18px rgba(236, 72, 153, 0.45);
+    }
+
+    .stop {
+      background: linear-gradient(135deg, #f87171, #ef4444);
+      box-shadow: 0 0 18px rgba(239, 68, 68, 0.45);
+      margin-top: 16px;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 14px;
+      opacity: 0.95;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 12px;
+      border-radius: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <h1>🌿 Tank Magic</h1>
+    <p class="subtitle">Cute little ecosystem controller ✨🐠</p>
+
+<button class="rain" onclick="sendCommand('rain')">
+  🌧️ Make it rain! <span id="rainStatus">🔴</span>
+</button>
+
+<button class="feed" onclick="sendCommand('dose')">
+  🌱 Feed the plants! <span id="doseStatus">🔴</span>
+</button>
+
+<button class="noise" onclick="sendCommand('noise')">
+  🔊 Make some noise! <span id="noiseStatus">🔴</span>
+</button>
+
+<button class="stop" onclick="sendCommand('stop')">
+  🛑 Stop everything
+</button>
+    <div id="status">Waiting for command...</div>
+  </div>
+
+<script>
+async function sendCommand(action) {
+  const status = document.getElementById('status');
+  status.textContent = `Sending ${action}...`;
+
+  try {
+    const response = await fetch('/' + action);
+    const text = await response.text();
+    status.textContent = text;
+
+    // Turn ON only the one pressed
+    if (action === 'rain') {
+      document.getElementById('rainStatus').textContent = '🟢';
+    }
+
+    if (action === 'dose') {
+      document.getElementById('doseStatus').textContent = '🟢';
+    }
+
+    if (action === 'noise') {
+      document.getElementById('noiseStatus').textContent = '🟢';
+    }
+
+    // Stop resets everything
+    if (action === 'stop') {
+      document.getElementById('rainStatus').textContent = '🔴';
+      document.getElementById('doseStatus').textContent = '🔴';
+      document.getElementById('noiseStatus').textContent = '🔴';
+      status.textContent = 'All systems stopped 🛑';
+    }
+
+  } catch (error) {
+    status.textContent = 'Error talking to server';
+  }
+}
+</script>
+</body>
+</html>
