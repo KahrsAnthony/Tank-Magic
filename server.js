@@ -19,6 +19,11 @@ app.get('/noise', (req, res) => {
   res.send('Sound started');
 });
 
+app.get('/shrimp', (req, res) => {
+  console.log('🍤 Shrimp feeder activated');
+  res.send('Shrimp feeding triggered');
+});
+
 app.get('/stop', (req, res) => {
   console.log('🛑 Stop everything triggered');
   res.send('All actions stopped');

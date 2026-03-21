@@ -82,6 +82,10 @@
       box-shadow: 0 0 18px rgba(239, 68, 68, 0.45);
       margin-top: 16px;
     }
+.feedShrimp {
+  background: linear-gradient(135deg, #fb923c, #f97316);
+  box-shadow: 0 0 18px rgba(249,115,22,0.5);
+}
 
     #status {
       margin-top: 20px;
@@ -110,6 +114,10 @@
   🔊 Make some noise! <span id="noiseStatus">🔴</span>
 </button>
 
+<button class="feedShrimp" onclick="sendCommand('shrimp')">
+  🍤 Feed the shrimp! <span id="shrimpStatus">🔴</span>
+</button>
+
 <button class="stop" onclick="sendCommand('stop')">
   🛑 Stop everything
 </button>
@@ -117,40 +125,50 @@
   </div>
 
 <script>
-async function sendCommand(action) {
-  const status = document.getElementById('status');
-  status.textContent = `Sending ${action}...`;
+  async function sendCommand(action) {
+    const status = document.getElementById('status');
 
-  try {
-    const response = await fetch('/' + action);
-    const text = await response.text();
-    status.textContent = text;
+    const statusMap = {
+      rain: 'rainStatus',
+      dose: 'doseStatus',
+      noise: 'noiseStatus',
+      shrimp: 'shrimpStatus'
+    };
 
-    // Turn ON only the one pressed
-    if (action === 'rain') {
-      document.getElementById('rainStatus').textContent = '🟢';
+    try {
+      if (action === 'stop') {
+        await fetch('/stop');
+        document.getElementById('rainStatus').textContent = '🔴';
+        document.getElementById('doseStatus').textContent = '🔴';
+        document.getElementById('noiseStatus').textContent = '🔴';
+        document.getElementById('shrimpStatus').textContent = '🔴';
+        status.textContent = 'All systems stopped 🛑';
+        return;
+      }
+
+      const indicatorId = statusMap[action];
+      const indicator = document.getElementById(indicatorId);
+
+      if (!indicator) {
+        status.textContent = 'Unknown control';
+        return;
+      }
+
+      const isCurrentlyOn = indicator.textContent === '🟢';
+
+      if (isCurrentlyOn) {
+        indicator.textContent = '🔴';
+        status.textContent = `${action} turned off`;
+      } else {
+        const response = await fetch('/' + action);
+        const text = await response.text();
+        indicator.textContent = '🟢';
+        status.textContent = text;
+      }
+    } catch (error) {
+      status.textContent = 'Error talking to server';
     }
-
-    if (action === 'dose') {
-      document.getElementById('doseStatus').textContent = '🟢';
-    }
-
-    if (action === 'noise') {
-      document.getElementById('noiseStatus').textContent = '🟢';
-    }
-
-    // Stop resets everything
-    if (action === 'stop') {
-      document.getElementById('rainStatus').textContent = '🔴';
-      document.getElementById('doseStatus').textContent = '🔴';
-      document.getElementById('noiseStatus').textContent = '🔴';
-      status.textContent = 'All systems stopped 🛑';
-    }
-
-  } catch (error) {
-    status.textContent = 'Error talking to server';
   }
-}
 </script>
 </body>
 </html>
