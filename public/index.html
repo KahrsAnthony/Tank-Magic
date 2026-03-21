@@ -114,7 +114,7 @@ button div:first-child {
 
 <button class="rain" data-control="true" onclick="sendCommand('rain')">
   <div>🌧️ Make it rain! <span id="rainStatus">🔴</span></div>
-  <div class="last-pressed" id="rainLast">Last pressed: never</div>
+  <div class="last-pressed" id="rainLast">Rain timer: inactive</div>
 </button>
 
 <button class="feed" data-control="true" onclick="sendCommand('dose')">
@@ -124,7 +124,6 @@ button div:first-child {
 
 <button class="noise" data-control="true" onclick="sendCommand('noise')">
   <div>🔊 Make some noise! <span id="noiseStatus">🔴</span></div>
-  <div class="last-pressed" id="noiseLast">Last pressed: never</div>
 </button>
 
 <button class="feedShrimp" data-control="true" onclick="sendCommand('shrimp')">
@@ -134,18 +133,15 @@ button div:first-child {
 
 <button class="stop" data-control="true" onclick="sendCommand('stop')">
   <div>🛑 Stop everything</div>
-  <div class="last-pressed" id="stopLast">Last pressed: never</div>
 </button>
 
     <div id="status">Waiting for command...</div>
   </div>
 <script>
   const lastPressedMap = {
-    rain: 'rainLast',
     dose: 'doseLast',
-    noise: 'noiseLast',
     shrimp: 'shrimpLast',
-    stop: 'stopLast'
+    rain: 'rainLast',
   };
 
   async function loadUser() {
@@ -169,29 +165,68 @@ button div:first-child {
     }
   }
 
-  async function loadButtonState() {
-    try {
-      const response = await fetch('/button-state');
-      const state = await response.json();
+function formatRemaining(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
 
-      Object.keys(lastPressedMap).forEach((action) => {
-        const el = document.getElementById(lastPressedMap[action]);
-        const info = state[action];
+async function loadButtonState() {
+  try {
+    const response = await fetch('/button-state');
+    const state = await response.json();
 
-        if (!el) return;
+    Object.keys(lastPressedMap).forEach((action) => {
+      const el = document.getElementById(lastPressedMap[action]);
+      const info = state[action];
 
-        if (!info) {
+      if (!el) return;
+
+      if (!info) {
+        if (action === 'rain') {
+          el.textContent = 'Rain timer: inactive';
+        } else {
           el.textContent = 'Last pressed: never';
-          return;
         }
+        return;
+      }
 
+      if (action === 'rain' && info.activeUntil) {
+        const remainingMs = new Date(info.activeUntil) - new Date();
+
+        if (remainingMs > 0) {
+          el.textContent = `Rain timer: ${formatRemaining(remainingMs)} remaining`;
+        } else {
+          el.textContent = 'Rain timer: inactive';
+        }
+      } else {
         const when = new Date(info.time).toLocaleString();
         el.textContent = `Last pressed: ${when} by ${info.user}`;
-      });
-    } catch (error) {
-      console.error('Failed to load button state', error);
+      }
+    });
+
+    const rainStatus = document.getElementById('rainStatus');
+    if (rainStatus) {
+      if (state.rain && state.rain.activeUntil) {
+        const remainingMs = new Date(state.rain.activeUntil) - new Date();
+        rainStatus.textContent = remainingMs > 0 ? '🟢' : '🔴';
+      } else {
+        rainStatus.textContent = '🔴';
+      }
     }
+  } catch (error) {
+    console.error('Failed to load button state', error);
   }
+}
+
+const activeTimers = {
+  rain: null
+};
+
+const activeUntil = {
+  rain: null
+};
 
   async function sendCommand(action) {
     const status = document.getElementById('status');
@@ -204,7 +239,7 @@ button div:first-child {
     };
 
     try {
-      if (action !== 'stop') {
+      if (action == 'dose' || action === 'shrimp') {
         const stateResponse = await fetch('/button-state');
         const state = await stateResponse.json();
         const lastInfo = state[action];
@@ -249,24 +284,33 @@ button div:first-child {
         return;
       }
 
-      const isCurrentlyOn = indicator.textContent === '🟢';
+if (action === 'rain') {
+  const response = await fetch('/rain');
+  const text = await response.text();
+  status.textContent = text;
+  await loadButtonState();
+  return;
+}
 
-      if (isCurrentlyOn) {
-        indicator.textContent = '🔴';
-        status.textContent = `${action} turned off`;
-      } else {
-        const response = await fetch('/' + action);
-        const text = await response.text();
-        indicator.textContent = '🟢';
-        status.textContent = text;
-        await loadButtonState();
-      }
+const isCurrentlyOn = indicator.textContent === '🟢';
+
+if (isCurrentlyOn) {
+  indicator.textContent = '🔴';
+  status.textContent = `${action} turned off`;
+} else {
+  const response = await fetch('/' + action);
+  const text = await response.text();
+  indicator.textContent = '🟢';
+  status.textContent = text;
+  await loadButtonState();
+}
+
     } catch (error) {
       console.error(error);
       status.textContent = 'Error talking to server';
     }
   }
-
+setInterval(loadButtonState, 1000);
   loadUser();
   loadButtonState();
 </script>

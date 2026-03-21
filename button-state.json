@@ -1,10 +1,23 @@
 {
   "rain": {
-    "time": "2026-03-21T17:41:13.816Z",
+    "time": "2026-03-21T19:58:29.803Z",
+    "user": "Tony",
+    "activeUntil": "2026-03-21T20:43:29.803Z"
+  },
+  "dose": {
+    "time": "2026-03-21T18:07:51.533Z",
     "user": "Tony"
   },
-  "dose": null,
-  "noise": null,
-  "shrimp": null,
-  "stop": null
+  "noise": {
+    "time": "2026-03-21T19:20:29.916Z",
+    "user": "Tony"
+  },
+  "shrimp": {
+    "time": "2026-03-21T18:07:58.462Z",
+    "user": "Tony"
+  },
+  "stop": {
+    "time": "2026-03-21T19:58:25.064Z",
+    "user": "Tony"
+  }
 }

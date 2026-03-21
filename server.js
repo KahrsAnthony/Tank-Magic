@@ -5,6 +5,7 @@ const express = require('express');
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(express.static('public'));
 
 app.use(session({
   secret: 'tank-magic-secret',
@@ -26,6 +27,47 @@ function readButtonState() {
       shrimp: null,
       stop: null
     };
+  }
+}
+
+function isActionActive(action) {
+  const state = readButtonState();
+  const info = state[action];
+
+  if (!info || !info.activeUntil) return false;
+
+  return new Date(info.activeUntil) > new Date();
+}
+
+function setActionActive(action, username, minutes) {
+  const state = readButtonState();
+  const now = new Date();
+  const activeUntil = new Date(now.getTime() + minutes * 60 * 1000);
+
+  state[action] = {
+    time: now.toISOString(),
+    user: username,
+    activeUntil: activeUntil.toISOString()
+  };
+
+  writeButtonState(state);
+}
+
+function clearExpiredActions() {
+  const state = readButtonState();
+  let changed = false;
+  const now = new Date();
+
+  Object.keys(state).forEach((action) => {
+    const info = state[action];
+    if (info && info.activeUntil && new Date(info.activeUntil) <= now) {
+      delete info.activeUntil;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    writeButtonState(state);
   }
 }
 
@@ -106,7 +148,12 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/login.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
 app.get('/button-state', (req, res) => {
+  clearExpiredActions();
   res.json(readButtonState());
 });
 
@@ -119,7 +166,13 @@ app.get('/rain', (req, res) => {
     return res.send('Viewer cannot control system');
   }
 
- updateLastPressed('rain', req.session.user.username);
+  clearExpiredActions();
+
+  if (isActionActive('rain')) {
+    return res.send('Rain is already running 🌧️');
+  }
+
+  setActionActive('rain', req.session.user.username, 45);
 
   console.log('🌧️ Water valve activated');
   res.send('Rain cycle started');
@@ -179,15 +232,23 @@ app.get('/stop', (req, res) => {
     return res.send('Viewer cannot control system');
   }
 
-  updateLastPressed('stop', req.session.user.username);
+  const state = readButtonState();
+
+  if (state.rain) {
+    delete state.rain.activeUntil;
+  }
+
+  state.stop = {
+    time: new Date().toISOString(),
+    user: req.session.user.username
+  };
+
+  writeButtonState(state);
 
   console.log('🛑 Stop everything triggered');
   res.send('All actions stopped');
 });
 
-app.use(express.static('public'));
-
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+app.listen(3000, '0.0.0.0', () => {
+  console.log('Server running at http://localhost:3000');
 });
-
