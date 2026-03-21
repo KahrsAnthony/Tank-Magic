@@ -139,8 +139,60 @@ button div:first-child {
 
     <div id="status">Waiting for command...</div>
   </div>
-
 <script>
+  const lastPressedMap = {
+    rain: 'rainLast',
+    dose: 'doseLast',
+    noise: 'noiseLast',
+    shrimp: 'shrimpLast',
+    stop: 'stopLast'
+  };
+
+  async function loadUser() {
+    const res = await fetch('/me');
+    const data = await res.json();
+
+    if (!data.loggedIn) {
+      window.location = '/login.html';
+      return;
+    }
+
+    const userInfo = document.getElementById('userInfo');
+    if (userInfo) {
+      userInfo.textContent = `${data.username} (${data.role})`;
+    }
+
+    if (data.role === 'viewer') {
+      document.querySelectorAll('button[data-control="true"]').forEach(btn => {
+        btn.disabled = true;
+      });
+    }
+  }
+
+  async function loadButtonState() {
+    try {
+      const response = await fetch('/button-state');
+      const state = await response.json();
+
+      Object.keys(lastPressedMap).forEach((action) => {
+        const el = document.getElementById(lastPressedMap[action]);
+        const info = state[action];
+
+        if (!el) return;
+
+        if (!info) {
+          el.textContent = 'Last pressed: never';
+          return;
+        }
+
+        const when = new Date(info.time).toLocaleString();
+        el.textContent = `Last pressed: ${when} by ${info.user}`;
+      });
+    } catch (error) {
+      console.error('Failed to load button state', error);
+    }
+  }
+
   async function sendCommand(action) {
     const status = document.getElementById('status');
 
@@ -151,15 +203,33 @@ button div:first-child {
       shrimp: 'shrimpStatus'
     };
 
-const lastPressedMap = {
-  rain: 'rainLast',
-  dose: 'doseLast',
-  noise: 'noiseLast',
-  shrimp: 'shrimpLast',
-  stop: 'stopLast'
-};
-
     try {
+      if (action !== 'stop') {
+        const stateResponse = await fetch('/button-state');
+        const state = await stateResponse.json();
+        const lastInfo = state[action];
+
+        if (lastInfo) {
+          const lastDate = new Date(lastInfo.time);
+          const now = new Date();
+
+          const sameDay =
+            lastDate.getFullYear() === now.getFullYear() &&
+            lastDate.getMonth() === now.getMonth() &&
+            lastDate.getDate() === now.getDate();
+
+          if (sameDay) {
+            const confirmed = confirm(
+              `${action} was already pressed today by ${lastInfo.user} at ${lastDate.toLocaleTimeString()}. Press it again?`
+            );
+
+            if (!confirmed) {
+              return;
+            }
+          }
+        }
+      }
+
       if (action === 'stop') {
         await fetch('/stop');
         document.getElementById('rainStatus').textContent = '🔴';
@@ -167,9 +237,8 @@ const lastPressedMap = {
         document.getElementById('noiseStatus').textContent = '🔴';
         document.getElementById('shrimpStatus').textContent = '🔴';
         status.textContent = 'All systems stopped 🛑';
+        await loadButtonState();
         return;
-document.getElementById('stopLast').textContent =
-  'Last pressed: ' + new Date().toLocaleTimeString();
       }
 
       const indicatorId = statusMap[action];
@@ -190,16 +259,16 @@ document.getElementById('stopLast').textContent =
         const text = await response.text();
         indicator.textContent = '🟢';
         status.textContent = text;
+        await loadButtonState();
       }
-const lastPressedId = lastPressedMap[action];
-if (lastPressedId) {
-  document.getElementById(lastPressedId).textContent =
-    'Last pressed: ' + new Date().toLocaleTimeString();
-}
     } catch (error) {
+      console.error(error);
       status.textContent = 'Error talking to server';
     }
   }
+
+  loadUser();
+  loadButtonState();
 </script>
 </body>
 </html>

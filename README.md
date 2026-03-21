@@ -29,3 +29,15 @@ The application includes a role-based login system:
 The system logs user actions, roles, allowed or blocked attempts, and timestamps for auditing and debugging.
 
 ![Activity Log](./screenshots/Activity%20Log.png)
+---
+
+## Last Pressed State (Server-Synced)
+
+The UI reflects server-side state rather than local browser timestamps.
+
+- Consistent across all devices  
+- Persists after refresh  
+- Derived from backend activity logs  
+- Prevents accidental repeated actions  
+
+![Last Pressed](./screenshots/last-pressed.png)

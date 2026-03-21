@@ -13,6 +13,37 @@ app.use(session({
 }));
 const PORT = 3000;
 
+const STATE_FILE = 'button-state.json';
+
+function readButtonState() {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
+  } catch (err) {
+    return {
+      rain: null,
+      dose: null,
+      noise: null,
+      shrimp: null,
+      stop: null
+    };
+  }
+}
+
+function writeButtonState(state) {
+  fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+}
+
+function updateLastPressed(action, username) {
+  const state = readButtonState();
+
+  state[action] = {
+    time: new Date().toISOString(),
+    user: username
+  };
+
+  writeButtonState(state);
+}
+
 function logAction(req, action, allowed) {
   const user = req.session.user;
 
@@ -75,6 +106,10 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+app.get('/button-state', (req, res) => {
+  res.json(readButtonState());
+});
+
 app.get('/rain', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
 
@@ -83,6 +118,8 @@ app.get('/rain', (req, res) => {
   if (blocked) {
     return res.send('Viewer cannot control system');
   }
+
+ updateLastPressed('rain', req.session.user.username);
 
   console.log('🌧️ Water valve activated');
   res.send('Rain cycle started');
@@ -97,6 +134,8 @@ logAction(req, 'dose', !blocked);
      return res.send('Viewer cannot control system');
 }
 
+ updateLastPressed('dose', req.session.user.username);
+
   console.log('🌱 Dosing system activated');
   res.send('Plant food added');
 });
@@ -110,6 +149,8 @@ logAction(req, 'noise', !blocked);
        return res.send('Viewer cannot control system');
 }
 
+ updateLastPressed('noise', req.session.user.username);
+
   console.log('🔊 Speaker activated');
   res.send('Sound started');
 });
@@ -117,21 +158,29 @@ logAction(req, 'noise', !blocked);
 app.get('/shrimp', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
 
-logAction(req, 'feed', !blocked);
+logAction(req, 'shrimp', !blocked);
 
     if (blocked) {
        return res.send('Viewer cannot control system');
 }
+
+ updateLastPressed('shrimp', req.session.user.username);
 
   console.log('🍤 Shrimp feeder activated');
   res.send('Shrimp feeding triggered');
 });
 
 app.get('/stop', (req, res) => {
-  if (!req.session.user || req.session.user.role === 'viewer') {
+  const blocked = !req.session.user || req.session.user.role === 'viewer';
+
+  logAction(req, 'stop', !blocked);
+
+  if (blocked) {
     return res.send('Viewer cannot control system');
   }
-logAction(req, 'stopped', !blocked);
+
+  updateLastPressed('stop', req.session.user.username);
+
   console.log('🛑 Stop everything triggered');
   res.send('All actions stopped');
 });
@@ -141,3 +190,4 @@ app.use(express.static('public'));
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
