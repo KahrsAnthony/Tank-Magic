@@ -95,6 +95,16 @@
       padding: 12px;
       border-radius: 12px;
     }
+.last-pressed {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: normal;
+  opacity: 0.85;
+}
+button div:first-child {
+  font-size: 18px;
+  font-weight: bold;
+}
   </style>
 </head>
 <body>
@@ -102,25 +112,31 @@
     <h1>🌿 Tank Magic</h1>
     <p class="subtitle">🦐 Cute little ecosystem controller 🦐</p>
 
-<button class="rain" onclick="sendCommand('rain')">
-  🌧️ Make it rain! <span id="rainStatus">🔴</span>
+<button class="rain" data-control="true" onclick="sendCommand('rain')">
+  <div>🌧️ Make it rain! <span id="rainStatus">🔴</span></div>
+  <div class="last-pressed" id="rainLast">Last pressed: never</div>
 </button>
 
-<button class="feed" onclick="sendCommand('dose')">
-  🌱 Feed the plants! <span id="doseStatus">🔴</span>
+<button class="feed" data-control="true" onclick="sendCommand('dose')">
+  <div>🌱 Feed the plants! <span id="doseStatus">🔴</span></div>
+  <div class="last-pressed" id="doseLast">Last pressed: never</div>
 </button>
 
-<button class="noise" onclick="sendCommand('noise')">
-  🔊 Make some noise! <span id="noiseStatus">🔴</span>
+<button class="noise" data-control="true" onclick="sendCommand('noise')">
+  <div>🔊 Make some noise! <span id="noiseStatus">🔴</span></div>
+  <div class="last-pressed" id="noiseLast">Last pressed: never</div>
 </button>
 
-<button class="feedShrimp" onclick="sendCommand('shrimp')">
-  🍤 Feed the shrimp! <span id="shrimpStatus">🔴</span>
+<button class="feedShrimp" data-control="true" onclick="sendCommand('shrimp')">
+  <div>🍤 Feed the shrimp! <span id="shrimpStatus">🔴</span></div>
+  <div class="last-pressed" id="shrimpLast">Last pressed: never</div>
 </button>
 
-<button class="stop" onclick="sendCommand('stop')">
-  🛑 Stop everything
+<button class="stop" data-control="true" onclick="sendCommand('stop')">
+  <div>🛑 Stop everything</div>
+  <div class="last-pressed" id="stopLast">Last pressed: never</div>
 </button>
+
     <div id="status">Waiting for command...</div>
   </div>
 
@@ -135,6 +151,14 @@
       shrimp: 'shrimpStatus'
     };
 
+const lastPressedMap = {
+  rain: 'rainLast',
+  dose: 'doseLast',
+  noise: 'noiseLast',
+  shrimp: 'shrimpLast',
+  stop: 'stopLast'
+};
+
     try {
       if (action === 'stop') {
         await fetch('/stop');
@@ -144,6 +168,8 @@
         document.getElementById('shrimpStatus').textContent = '🔴';
         status.textContent = 'All systems stopped 🛑';
         return;
+document.getElementById('stopLast').textContent =
+  'Last pressed: ' + new Date().toLocaleTimeString();
       }
 
       const indicatorId = statusMap[action];
@@ -165,6 +191,11 @@
         indicator.textContent = '🟢';
         status.textContent = text;
       }
+const lastPressedId = lastPressedMap[action];
+if (lastPressedId) {
+  document.getElementById(lastPressedId).textContent =
+    'Last pressed: ' + new Date().toLocaleTimeString();
+}
     } catch (error) {
       status.textContent = 'Error talking to server';
     }
