@@ -1,111 +1,88 @@
 # Tank Magic
 
-A self-hosted aquarium control system with a mobile-friendly web UI, role-based access, activity logging, and secure remote access.
+A self-hosted aquarium control system with a mobile-friendly web UI, role-based access, and real-time system control.
 
 ---
 
-## Overview
+## 🚀 Overview
 
-Tank Magic is a custom control panel for managing an aquarium system from a browser. It was built as both a real control interface and a portfolio/demo project.
+Tank Magic is a custom-built control panel for managing an aquarium system from any device.
 
-Current features include:
-
-- Role-based authentication
-- Remote access over Tailscale
-- Server-side activity logging
-- Server-synced button state across devices
-- Rain timer with shared countdown
-- Protection against repeated dosing/feeding actions
-- Secure authentication with hashed passwords
+This project is designed as both:
+- a **real aquarium automation system**
+- a **portfolio project demonstrating full-stack development**
 
 ---
 
-## Authentication System
+## 🔥 Features
 
-The application includes a role-based login system with securely hashed passwords.
+- 🌧️ Rain system with server-side timer
+- 🔊 Sound system (ambient effects)
+- 🌱 Plant dosing control
+- 🍤 Shrimp feeding control
+- 🛑 Stop Everything (global reset)
+- 🔐 Role-based authentication (admin / user / viewer)
+- 📊 Activity logging system
+- 🌐 Multi-device synchronization
+- 🔒 Password hashing with bcrypt
 
-- Passwords are hashed using bcrypt
-- No plain-text credentials are stored
+---
+
+## 🔐 Authentication System
+
+- Passwords are securely hashed using bcrypt
+- No plain-text credentials stored
 - Role-based access:
-  - **Admin**: full control
-  - **User**: operational control
-  - **Viewer**: read-only/demo mode
 
-![Login UI](./screenshots/Login%20Screen.png)
----
+| Role   | Access Level |
+|--------|-------------|
+| Admin  | Full control |
+| User   | Normal control |
+| Viewer | Read-only |
 
-## Security
-
-- Passwords are stored using bcrypt hashing
-- Sessions are managed via express-session
-- Role-based access control prevents unauthorized actions
-- Designed for use on a private network (e.g., Tailscale)
+![Login UI](./screenshots/login-screen.png)
 
 ---
 
-## Control Panel UI
+## 🎛️ Control Panel
 
-The main control panel supports:
-
-- Rain control
-- Plant dosing
-- Sound trigger
-- Shrimp feeding
-- Stop all systems
-
-![Main UI](./screenshots/Main%20Page%20UI.png)
+![Main UI](./screenshots/main-ui.png)
 
 ---
 
-## Activity Logging
+## 🌧️ Rain Timer
 
-The server logs user actions, roles, allowed/blocked attempts, and timestamps for auditing and debugging.
+- Server-controlled 45-minute timer
+- Synced across all devices
+- Prevents duplicate triggers
 
-![Activity Log](./screenshots/Activity%20Log.png)
-
----
-
-## Server-Synced Last Pressed State
-
-The UI reflects server-side state rather than local browser timestamps.
-
-- Consistent across all devices
-- Persists after refresh
-- Derived from backend state
-- Used to warn before repeated dosing or feeding actions
-
-![Last Pressed](./screenshots/last-pressed.png)
+![Rain Timer](./screenshots/rain-timer.png)
 
 ---
 
-## Rain System (Server-Controlled Timer)
+## 📊 Activity Logging
 
-Rain cycles are controlled entirely by the server:
+- Tracks all system interactions
+- Logs user, action, and timestamp
+- Useful for debugging and auditing
 
-- 45-minute runtime managed server-side
-- All clients stay synchronized
-- Prevents duplicate triggers while active
-- Displays live countdown in the UI
-
-![Rain Timer](./screenshots/Rain%20Timer.png)
+![Activity Log](./screenshots/activity-log.png)
 
 ---
 
-## Tech Stack
+## 🧠 System Design
 
-- Node.js
-- Express
-- HTML / CSS / JavaScript
-- Tailscale
-- File-based state and activity logging
+- Backend: Node.js + Express
+- Frontend: HTML / CSS / JavaScript
+- State stored and synced server-side
+- Designed to run on a Raspberry Pi for hardware control
 
 ---
 
-## In Progress
+## ⚙️ How to Run
 
-Planned improvements:
-
-- Weekly dosing scheduler
-- Better settings page
-- Hashed password storage
-- Hardware integration on Raspberry Pi
+```bash
+git clone https://github.com/KahrsAnthony/Tank-Magic.git
+cd Tank-Magic
+npm install
+node server.js

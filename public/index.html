@@ -124,6 +124,7 @@ button div:first-child {
 
 <button class="noise" data-control="true" onclick="sendCommand('noise')">
   <div>🔊 Make some noise! <span id="noiseStatus">🔴</span></div>
+  <div class="last-pressed" id="noiseLast">Noise timer: inactive</div>
 </button>
 
 <button class="feedShrimp" data-control="true" onclick="sendCommand('shrimp')">
@@ -132,7 +133,12 @@ button div:first-child {
 </button>
 
 <button class="stop" data-control="true" onclick="sendCommand('stop')">
-  <div>🛑 Stop everything</div>
+  <div>🛑 Stop everything <span id="stopStatus">🔴</span></div>
+  <div class="last-pressed" id="stopLast">E-stop: inactive</div>
+</button>
+
+<button class="stop" id="resetStopButton" style="display:none;" onclick="sendCommand('reset-stop')">
+  <div>✅ Reset E-stop</div>
 </button>
 
     <div id="status">Waiting for command...</div>
@@ -142,7 +148,11 @@ button div:first-child {
     dose: 'doseLast',
     shrimp: 'shrimpLast',
     rain: 'rainLast',
+    noise: 'noiseLast',
+    stop: 'stopLast'
   };
+
+let currentUserRole = null;
 
   async function loadUser() {
     const res = await fetch('/me');
@@ -157,6 +167,7 @@ button div:first-child {
     if (userInfo) {
       userInfo.textContent = `${data.username} (${data.role})`;
     }
+currentUserRole = data.role;
 
     if (data.role === 'viewer') {
       document.querySelectorAll('button[data-control="true"]').forEach(btn => {
@@ -183,27 +194,42 @@ async function loadButtonState() {
 
       if (!el) return;
 
-      if (!info) {
-        if (action === 'rain') {
-          el.textContent = 'Rain timer: inactive';
-        } else {
-          el.textContent = 'Last pressed: never';
-        }
-        return;
-      }
+if (!info) {
+  if (action === 'rain') {
+    el.textContent = 'Rain timer: inactive';
+  } else if (action === 'noise') {
+    el.textContent = 'Noise timer: inactive';
+  } else if (action === 'stop') {
+    el.textContent = 'E-stop: inactive';
+  } else {
+    el.textContent = 'Last pressed: never';
+  }
+  return;
+}
 
-      if (action === 'rain' && info.activeUntil) {
-        const remainingMs = new Date(info.activeUntil) - new Date();
+if (action === 'stop' && info.active === true) {
+  const when = new Date(info.time).toLocaleString();
+  el.textContent = `E-stop active since ${when} by ${info.user}`;
+} else if ((action === 'rain' || action === 'noise') && info.activeUntil) {
+  const remainingMs = new Date(info.activeUntil) - new Date();
 
-        if (remainingMs > 0) {
-          el.textContent = `Rain timer: ${formatRemaining(remainingMs)} remaining`;
-        } else {
-          el.textContent = 'Rain timer: inactive';
-        }
-      } else {
-        const when = new Date(info.time).toLocaleString();
-        el.textContent = `Last pressed: ${when} by ${info.user}`;
-      }
+  if (remainingMs > 0) {
+    if (action === 'rain') {
+      el.textContent = `Rain timer: ${formatRemaining(remainingMs)} remaining`;
+    } else if (action === 'noise') {
+      el.textContent = `Noise timer: ${formatRemaining(remainingMs)} remaining`;
+    }
+  } else {
+    if (action === 'rain') {
+      el.textContent = 'Rain timer: inactive';
+    } else if (action === 'noise') {
+      el.textContent = 'Noise timer: inactive';
+    }
+  }
+} else {
+  const when = new Date(info.time).toLocaleString();
+  el.textContent = `Last pressed: ${when} by ${info.user}`;
+}
     });
 
     const rainStatus = document.getElementById('rainStatus');
@@ -215,18 +241,40 @@ async function loadButtonState() {
         rainStatus.textContent = '🔴';
       }
     }
+
+const noiseStatus = document.getElementById('noiseStatus');
+if (noiseStatus) {
+  if (state.noise && state.noise.activeUntil) {
+    const remainingMs = new Date(state.noise.activeUntil) - new Date();
+    noiseStatus.textContent = remainingMs > 0 ? '🟢' : '🔴';
+  } else {
+    noiseStatus.textContent = '🔴';
+  }
+}
+const stopStatus = document.getElementById('stopStatus');
+const resetStopButton = document.getElementById('resetStopButton');
+
+if (stopStatus) {
+  if (state.stop && state.stop.active === true) {
+    stopStatus.textContent = '🟢';
+
+    if (resetStopButton) {
+      resetStopButton.style.display =
+        currentUserRole === 'admin' ? 'block' : 'none';
+    }
+  } else {
+    stopStatus.textContent = '🔴';
+
+    if (resetStopButton) {
+      resetStopButton.style.display = 'none';
+    }
+  }
+}
+
   } catch (error) {
     console.error('Failed to load button state', error);
   }
 }
-
-const activeTimers = {
-  rain: null
-};
-
-const activeUntil = {
-  rain: null
-};
 
   async function sendCommand(action) {
     const status = document.getElementById('status');
@@ -239,7 +287,7 @@ const activeUntil = {
     };
 
     try {
-      if (action == 'dose' || action === 'shrimp') {
+      if (action === 'dose' || action === 'shrimp') {
         const stateResponse = await fetch('/button-state');
         const state = await stateResponse.json();
         const lastInfo = state[action];
@@ -265,27 +313,39 @@ const activeUntil = {
         }
       }
 
-      if (action === 'stop') {
-        await fetch('/stop');
-        document.getElementById('rainStatus').textContent = '🔴';
-        document.getElementById('doseStatus').textContent = '🔴';
-        document.getElementById('noiseStatus').textContent = '🔴';
-        document.getElementById('shrimpStatus').textContent = '🔴';
-        status.textContent = 'All systems stopped 🛑';
-        await loadButtonState();
-        return;
-      }
+if (action === 'stop') {
+  const response = await fetch('/stop');
+  const text = await response.text();
 
-      const indicatorId = statusMap[action];
-      const indicator = document.getElementById(indicatorId);
+  document.getElementById('rainStatus').textContent = '🔴';
+  document.getElementById('doseStatus').textContent = '🔴';
+  document.getElementById('noiseStatus').textContent = '🔴';
+  document.getElementById('shrimpStatus').textContent = '🔴';
+  document.getElementById('stopStatus').textContent = '🔴';
 
-      if (!indicator) {
-        status.textContent = 'Unknown control';
-        return;
-      }
+  status.textContent = text;
+  await loadButtonState();
+  return;
+}
 
-if (action === 'rain') {
-  const response = await fetch('/rain');
+if (action === 'reset-stop') {
+  const response = await fetch('/reset-stop');
+  const text = await response.text();
+  status.textContent = text;
+  await loadButtonState();
+  return;
+}
+
+const indicatorId = statusMap[action];
+const indicator = document.getElementById(indicatorId);
+
+if (!indicator) {
+  status.textContent = 'Unknown control';
+  return;
+}
+
+if (action === 'rain' || action === 'noise') {
+  const response = await fetch('/' + action);
   const text = await response.text();
   status.textContent = text;
   await loadButtonState();
@@ -300,8 +360,16 @@ if (isCurrentlyOn) {
 } else {
   const response = await fetch('/' + action);
   const text = await response.text();
-  indicator.textContent = '🟢';
   status.textContent = text;
+
+  const succeeded =
+    text === 'Plant food added' ||
+    text === 'Shrimp feeding triggered';
+
+  if (succeeded) {
+    indicator.textContent = '🟢';
+  }
+
   await loadButtonState();
 }
 

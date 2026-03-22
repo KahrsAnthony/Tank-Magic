@@ -172,7 +172,10 @@ app.get('/rain', (req, res) => {
 
   if (blocked) {
     return res.send('Viewer cannot control system');
-  }
+}
+if (isEStopActive()) {
+  return res.send('E-stop is active. Admin must reset the system.');
+}
 
   clearExpiredActions();
 
@@ -194,6 +197,9 @@ logAction(req, 'dose', !blocked);
   if (blocked) {
      return res.send('Viewer cannot control system');
 }
+if (isEStopActive()) {
+  return res.send('E-stop is active. Admin must reset the system.');
+}
 
  updateLastPressed('dose', req.session.user.username);
 
@@ -204,13 +210,22 @@ logAction(req, 'dose', !blocked);
 app.get('/noise', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
 
-logAction(req, 'noise', !blocked);
+  logAction(req, 'noise', !blocked);
 
-    if (blocked) {
-       return res.send('Viewer cannot control system');
+  if (blocked) {
+    return res.send('Viewer cannot control system');
+}
+if (isEStopActive()) {
+  return res.send('E-stop is active. Admin must reset the system.');
 }
 
- updateLastPressed('noise', req.session.user.username);
+  clearExpiredActions();
+
+  if (isActionActive('noise')) {
+    return res.send('Noise is already running 🔊');
+  }
+
+  setActionActive('noise', req.session.user.username, 45);
 
   console.log('🔊 Speaker activated');
   res.send('Sound started');
@@ -223,6 +238,9 @@ logAction(req, 'shrimp', !blocked);
 
     if (blocked) {
        return res.send('Viewer cannot control system');
+}
+if (isEStopActive()) {
+  return res.send('E-stop is active. Admin must reset the system.');
 }
 
  updateLastPressed('shrimp', req.session.user.username);
@@ -240,22 +258,67 @@ app.get('/stop', (req, res) => {
     return res.send('Viewer cannot control system');
   }
 
+  if (isEStopActive()) {
+    return res.send('E-stop is already active 🛑');
+  }
+
+  setEStop(req.session.user.username);
+
+  console.log('🛑 Emergency stop activated');
+  res.send('Emergency stop activated');
+});
+
+app.get('/reset-stop', (req, res) => {
+  if (!req.session.user) {
+    return res.send('Not logged in');
+  }
+
+  if (req.session.user.role !== 'admin') {
+    return res.send('Only admin can reset the E-stop');
+  }
+
+  clearEStop(req.session.user.username);
+
+  console.log('✅ Emergency stop reset by admin');
+  res.send('Emergency stop reset');
+});
+
+function isEStopActive() {
   const state = readButtonState();
+  return !!(state.stop && state.stop.active === true);
+}
+
+function setEStop(username) {
+  const state = readButtonState();
+
+  state.stop = {
+    active: true,
+    time: new Date().toISOString(),
+    user: username
+  };
 
   if (state.rain) {
     delete state.rain.activeUntil;
   }
 
+  if (state.noise) {
+    delete state.noise.activeUntil;
+  }
+
+  writeButtonState(state);
+}
+
+function clearEStop(username) {
+  const state = readButtonState();
+
   state.stop = {
-    time: new Date().toISOString(),
-    user: req.session.user.username
+    active: false,
+    clearedAt: new Date().toISOString(),
+    clearedBy: username
   };
 
   writeButtonState(state);
-
-  console.log('🛑 Stop everything triggered');
-  res.send('All actions stopped');
-});
+}
 
 app.listen(3000, '0.0.0.0', () => {
   console.log('Server running at http://localhost:3000');
