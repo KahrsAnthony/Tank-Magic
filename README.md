@@ -55,16 +55,16 @@ The current software platform already includes:
 - Tailscale remote access
 
 ### Login System
-![Login UI](./screenshots/login-screen.png)
+![Login UI](./screenshots/login-screen.jpg)
 
 ### Main Control Panel
-![Main UI](./screenshots/main-ui.png)
+![Main UI](./screenshots/main-ui.jpg)
 
 ### Rain Timer
-![Rain Timer](./screenshots/rain-timer.png)
+![Rain Timer](./screenshots/rain-timer.jpg)
 
 ### Activity Log
-![Activity Log](./screenshots/activity-log.png)
+![Activity Log](./screenshots/activity-log.jpg)
 
 ---
 
@@ -81,10 +81,10 @@ The current hardware build is focused on:
 ### Hardware Overview
 
 #### Raspberry Pi Mounting
-![Pi Mounting](./screenshots/pi-mounting.png)
+![Pi Mounting](./screenshots/pi-mounting.jpg)
 
 #### Power Cable Routing
-![Cable Routing](./screenshots/cable-routing.png)
+![Cable Routing](./screenshots/cable-routing.jpg)
 
 #### Potential Relay Mount Location
 ![Relay Mount Location](./screenshots/relay-mount-location.png)
