@@ -55,16 +55,16 @@ The current software platform already includes:
 - Tailscale remote access
 
 ### Login System
-![Login UI](./screenshots/login-screen.jpg)
+![Login UI](./screenshots/login-screen.png)
 
 ### Main Control Panel
-![Main UI](./screenshots/main-ui.jpg)
+![Main UI](./screenshots/main-ui.png)
 
 ### Rain Timer
-![Rain Timer](./screenshots/rain-timer.jpg)
+![Rain Timer](./screenshots/rain-timer.png)
 
 ### Activity Log
-![Activity Log](./screenshots/activity-log.jpg)
+![Activity Log](./screenshots/activity-log.png)
 
 ---
 
@@ -87,7 +87,7 @@ The current hardware build is focused on:
 ![Cable Routing](./screenshots/cable-routing.jpg)
 
 #### Potential Relay Mount Location
-![Relay Mount Location](./screenshots/relay-mount-location.png)
+![Relay Mount Location](./screenshots/relay-mount-location.jpg)
 
 ### Current Cabinet Notes
 
