@@ -1,5 +1,11 @@
+const { spawn } = require('child_process');
+let noiseProcess = null;
+const SCHEDULED_NOISE_HOUR = 20;
+const SCHEDULED_NOISE_MINUTE = 0;
+let lastScheduledNoiseRun = null;
 const fs = require('fs');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const path = require('path');
 const express = require('express');
 const app = express();
@@ -9,10 +15,20 @@ app.use(express.json());
 app.use(express.static('public'));
 
 app.use(session({
+  store: new FileStore({
+    path: './sessions',
+    retries: 0,
+    ttl: 60 * 60 * 4
+  }),
   secret: 'tank-magic-secret',
   resave: false,
-  saveUninitialized: false
+  saveUninitialized: false,
+  rolling: true,
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 4
+  }
 }));
+
 const PORT = 3000;
 
 const STATE_FILE = 'button-state.json';
@@ -28,6 +44,77 @@ function readButtonState() {
       shrimp: null,
       stop: null
     };
+  }
+}
+
+function setMomentaryActive(action, username, seconds) {
+  const state = readButtonState();
+  const now = new Date();
+  const activeUntil = new Date(now.getTime() + seconds * 1000);
+
+  state[action] = {
+    time: now.toISOString(),
+    user: username,
+    activeUntil: activeUntil.toISOString()
+  };
+
+  writeButtonState(state);
+}
+
+function startNoise(username = 'system') {
+  clearExpiredActions();
+
+  if (isActionActive('noise')) {
+    return { ok: false, message: 'Noise already running 🔊' };
+  }
+
+  if (noiseProcess) {
+    return { ok: false, message: 'Noise already running 🔊' };
+  }
+
+  noiseProcess = spawn('aplay', ['/home/pi/Tank-Magic/sounds/rain.wav']);
+
+  noiseProcess.on('exit', () => {
+    noiseProcess = null;
+  });
+
+  setActionActive('noise', username, 45);
+
+  console.log('🔊 Speaker activated');
+  return { ok: true, message: 'Thunderstorm started 🌧️' };
+}
+
+function logSystemAction(action, allowed = true) {
+  const entry = {
+    time: new Date().toISOString(),
+    user: 'system',
+    role: 'scheduler',
+    action,
+    allowed
+  };
+
+  fs.appendFileSync('activity.log', JSON.stringify(entry) + '\n');
+}
+
+function checkScheduledNoise() {
+  const now = new Date();
+
+  const runKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
+
+  if (
+    now.getHours() === SCHEDULED_NOISE_HOUR &&
+    now.getMinutes() === SCHEDULED_NOISE_MINUTE &&
+    lastScheduledNoiseRun !== runKey
+  ) {
+    const result = startNoise('system');
+
+    if (result.ok) {
+      logSystemAction('noise', true);
+      lastScheduledNoiseRun = runKey;
+      console.log('⏰ Scheduled noise started');
+    } else {
+      console.log(`⏰ Scheduled noise skipped: ${result.message}`);
+    }
   }
 }
 
@@ -190,18 +277,15 @@ if (isEStopActive()) {
 });
 
 app.get('/dose', (req, res) => {
-  const blocked = !req.session.user || req.session.user.role ==='viewer';
- 
-logAction(req, 'dose', !blocked);
+  const blocked = !req.session.user || req.session.user.role === 'viewer';
+  logAction(req, 'dose', !blocked);
 
   if (blocked) {
-     return res.send('Viewer cannot control system');
-}
-if (isEStopActive()) {
-  return res.send('E-stop is active. Admin must reset the system.');
-}
+    return res.send('Viewer cannot control system');
+  }
 
- updateLastPressed('dose', req.session.user.username);
+  updateLastPressed('dose', req.session.user.username);
+  setMomentaryActive('dose', req.session.user.username, 10);
 
   console.log('🌱 Dosing system activated');
   res.send('Plant food added');
@@ -209,15 +293,14 @@ if (isEStopActive()) {
 
 app.get('/noise', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
-
   logAction(req, 'noise', !blocked);
 
   if (blocked) {
     return res.send('Viewer cannot control system');
-}
-if (isEStopActive()) {
-  return res.send('E-stop is active. Admin must reset the system.');
-}
+  }
+
+const result = startNoise(req.session.user.username);
+  res.send(result.message);
 
   clearExpiredActions();
 
@@ -225,25 +308,32 @@ if (isEStopActive()) {
     return res.send('Noise is already running 🔊');
   }
 
+  if (noiseProcess) {
+    return res.send('Noise is already running 🔊');
+  }
+
+  noiseProcess = spawn('aplay', ['/home/pi/Tank-Magic/sounds/rain.wav']);
+
+  noiseProcess.on('exit', () => {
+    noiseProcess = null;
+  });
+
   setActionActive('noise', req.session.user.username, 45);
 
   console.log('🔊 Speaker activated');
-  res.send('Sound started');
+  res.send('Thunderstorm started 🌧️');
 });
 
 app.get('/shrimp', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
+  logAction(req, 'shrimp', !blocked);
 
-logAction(req, 'shrimp', !blocked);
+  if (blocked) {
+    return res.send('Viewer cannot control system');
+  }
 
-    if (blocked) {
-       return res.send('Viewer cannot control system');
-}
-if (isEStopActive()) {
-  return res.send('E-stop is active. Admin must reset the system.');
-}
-
- updateLastPressed('shrimp', req.session.user.username);
+  updateLastPressed('shrimp', req.session.user.username);
+  setMomentaryActive('shrimp', req.session.user.username, 10);
 
   console.log('🍤 Shrimp feeder activated');
   res.send('Shrimp feeding triggered');
@@ -263,6 +353,11 @@ app.get('/stop', (req, res) => {
   }
 
   setEStop(req.session.user.username);
+
+if (noiseProcess) {
+  noiseProcess.kill('SIGTERM');
+  noiseProcess = null;
+}
 
   console.log('🛑 Emergency stop activated');
   res.send('Emergency stop activated');
@@ -319,6 +414,8 @@ function clearEStop(username) {
 
   writeButtonState(state);
 }
+
+setInterval(checkScheduledNoise, 30000);
 
 app.listen(3000, '0.0.0.0', () => {
   console.log('Server running at http://localhost:3000');

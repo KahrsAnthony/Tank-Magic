@@ -251,6 +251,27 @@ if (noiseStatus) {
     noiseStatus.textContent = '🔴';
   }
 }
+
+const doseStatus = document.getElementById('doseStatus');
+if (doseStatus) {
+  if (state.dose && state.dose.activeUntil) {
+    const remainingMs = new Date(state.dose.activeUntil) - new Date();
+    doseStatus.textContent = remainingMs > 0 ? '🟢' : '🔴';
+  } else {
+    doseStatus.textContent = '🔴';
+  }
+}
+
+const shrimpStatus = document.getElementById('shrimpStatus');
+if (shrimpStatus) {
+  if (state.shrimp && state.shrimp.activeUntil) {
+    const remainingMs = new Date(state.shrimp.activeUntil) - new Date();
+    shrimpStatus.textContent = remainingMs > 0 ? '🟢' : '🔴';
+  } else {
+    shrimpStatus.textContent = '🔴';
+  }
+}
+
 const stopStatus = document.getElementById('stopStatus');
 const resetStopButton = document.getElementById('resetStopButton');
 
@@ -361,15 +382,6 @@ if (isCurrentlyOn) {
   const response = await fetch('/' + action);
   const text = await response.text();
   status.textContent = text;
-
-  const succeeded =
-    text === 'Plant food added' ||
-    text === 'Shrimp feeding triggered';
-
-  if (succeeded) {
-    indicator.textContent = '🟢';
-  }
-
   await loadButtonState();
 }
 
