@@ -156,7 +156,7 @@ Planned as an **8-bottle dosing system** supporting:
 
 ## To-Do
 
-- [X] Build the noise system for thunder and rain sounds (IMPLEMENTED)
+- [ X ] Build the noise system for thunder and rain sounds (IMPLEMENTED)
 - [ ] Add a timer for automatic deployment of the rain sound system
 - [ ] Install and wire a mounted speaker
 - [ ] Build the motor valve and plumbing for the rain water system
