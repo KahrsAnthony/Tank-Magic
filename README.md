@@ -164,6 +164,8 @@ Planned as an **8-bottle dosing system** supporting:
 - [ ] Add atomizer to create fog effect
 - [ ] Add white led strip to simulate lighting strikes
 - [ ] Add sudo random weather effect selection system that deploys weather events randomly throughout the day
+- [ ] Find a better cable management solution
+
 ---
 
 ## Deployment
@@ -203,3 +205,43 @@ It is being developed into a full aquarium cabinet integration system that combi
 - cabinet-mounted electronics
 - future sound, plumbing, and dosing systems
 - real-world automation concepts
+
+---
+
+## Parts List
+
+Things I've bought so far:
+
+- Raspberry Pi 4
+- Fluval 207 Canister Filter
+- Fluval Plant 4.0 light
+- Marineland 30W Heater
+- 20 Gallon Long Tank
+- Aquarium Stand
+- Power strip w/ Usb ports
+- Raspberry Pi 4 fan case
+- "Sound Blaster" Speaker bar
+- USBC Pi Power Cable
+- 64G SD Card
+- Small Mounting Screws
+- ZipTie mounts
+- Orange Zip Ties
+- Wire Loom
+
+Shopping List:
+
+- Buck Power Converter 24VDC-5VDC
+- 2 Bus Terminals x10
+- 24VDC 8A Power Supply
+- 18-22AWG Wire
+- Terminal wire ends
+- solder iron/solder
+- 4 channel relay board
+- 7.5A fuse
+- In-line Fuse holder
+- Fog Machine
+- Motorized ball valve
+- White Led Strip
+- Black Electrical Tape
+- More wire loom
+- Better Cable management solution
