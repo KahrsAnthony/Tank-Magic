@@ -85,6 +85,10 @@ The aquarium is currently powered through a central power strip, with dedicated 
 
 ![Current Power Distribution](./screenshots/current-power-distribution.png)
 
+### Power Distribution (REV1)
+
+![Power Distribution REV1](./screenshots/power-distribution-rev1.png)
+
 ### Notes
 
 - Canister filter and heater remain always powered
