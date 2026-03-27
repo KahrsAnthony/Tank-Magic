@@ -1,8 +1,13 @@
 const { spawn } = require('child_process');
 let noiseProcess = null;
+
 const SCHEDULED_NOISE_HOUR = 20;
 const SCHEDULED_NOISE_MINUTE = 0;
 let lastScheduledNoiseRun = null;
+
+let worldState = 'clear'; // 'clear' | 'drizzle' | 'storm'
+let fogPulseTimeout = null;
+
 const fs = require('fs');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
@@ -10,6 +15,9 @@ const path = require('path');
 const express = require('express');
 const app = express();
 const bcrypt = require('bcrypt');
+const { Gpio } = require('onoff');
+const fogPin = new Gpio(17, 'out');
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
@@ -29,9 +37,27 @@ app.use(session({
   }
 }));
 
-const PORT = 3000;
+process.on('SIGTERM', () => { try { setFog(false); } catch {} try { fogPin.unexport(); } catch {} process.exit(0); });
+process.on('SIGINT',  () => { try { setFog(false); } catch {} try { fogPin.unexport(); } catch {} process.exit(0); });
 
+const PORT = 3000;
 const STATE_FILE = 'button-state.json';
+
+let worldState = 'clear';
+
+function setFog(on) { fogPin.writeSync(on ? 0 : 1); console.log(on ? 'FOG ON' : 'FOG OFF'); }
+
+setInterval(() => {
+  if (worldState === 'drizzle') {
+    console.log('World state is drizzle, triggering fog');
+    setFog(true);
+
+    setTimeout(() => {
+      setFog(false);
+      console.log('Fog OFF after drizzle pulse');
+    }, 10000);
+  }
+}, 30000);
 
 function readButtonState() {
   try {
@@ -84,6 +110,21 @@ function startNoise(username = 'system') {
   return { ok: true, message: 'Thunderstorm started 🌧️' };
 }
 
+function randomBetween(minMs, maxMs) {
+  return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+}
+
+function setFog(on) {
+  // replace this with GPIO PIN Number
+  // fogPin.writeSync(on ? 1 : 0);
+  console.log(on ? 'FOG ON' : 'FOG OFF');
+}
+
+function setWorldState(newState) {
+  worldState = newState;
+  console.log(`World state -> ${worldState}`);
+}
+
 function logSystemAction(action, allowed = true) {
   const entry = {
     time: new Date().toISOString(),
@@ -94,6 +135,36 @@ function logSystemAction(action, allowed = true) {
   };
 
   fs.appendFileSync('activity.log', JSON.stringify(entry) + '\n');
+}
+
+function runDrizzleCycle() {
+  if (!drizzleActive) return;
+
+  const fogOnTime = randomBetween(7000, 14000);   // 7–14 sec on
+  const fogOffTime = randomBetween(5000, 12000);  // 5–12 sec off
+
+  setFog(true);
+  console.log(`Drizzle fog ON for ${fogOnTime}ms`);
+
+  drizzleTimeout = setTimeout(() => {
+    setFog(false);
+    console.log(`Drizzle fog OFF for ${fogOffTime}ms`);
+
+    drizzleTimeout = setTimeout(() => {
+      runDrizzleCycle();
+    }, fogOffTime);
+  }, fogOnTime);
+}
+
+function startDrizzle() {
+  worldState = 'drizzle';
+  console.log('Drizzle started');
+}
+
+function stopDrizzle() {
+  worldState = 'clear';
+  setFog(false);
+  console.log('Drizzle stopped');
 }
 
 function checkScheduledNoise() {
@@ -382,6 +453,10 @@ function isEStopActive() {
   const state = readButtonState();
   return !!(state.stop && state.stop.active === true);
 }
+
+app.get('/api/world-state', (req, res) => {
+  res.json({ worldState });
+});
 
 function setEStop(username) {
   const state = readButtonState();
