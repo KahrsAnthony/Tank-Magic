@@ -47,12 +47,15 @@ The current software platform already includes:
 - password hashing with bcrypt
 - server-side session storage
 - shared state across devices
-- rain timer
-- noise timer
-- stop/reset behavior
 - activity logging
+- emergency stop / reset behavior
 - Raspberry Pi deployment with systemd
 - Tailscale remote access
+- weather effect state management
+- drizzle effect logic
+- rain effect logic (currently simulated in software)
+- storm mode composition (drizzle + rain + thunder)
+- scheduled daily storm trigger
 
 ### Login System
 ![Login UI](./screenshots/login-screen.png)
@@ -156,19 +159,38 @@ Planned as an **8-bottle dosing system** supporting:
 - recipe-based automation
 - future expansion and refinement
 
+### Weather Engine
+
+Current backend weather logic now supports:
+- drizzle effect state
+- rain effect state
+- composed storm mode
+- scheduled event triggering
+
+Future weather engine goals:
+- phased storm sequencing
+- random weather event generation
+- configurable scene profiles
+- lightning / flash integration
+- fade-out transitions
+
 ---
 
 ## To-Do
 
-- [ X ] Build the noise system for thunder and rain sounds (IMPLEMENTED)
-- [ X ] Add a timer for automatic deployment of the rain sound system
-- [ ] Install and wire a mounted speaker
+## To-Do
+- [x] Build the noise system for thunder and rain sounds
+- [x] Add scheduled storm event triggering for backend testing
+- [x] Build software support for drizzle, rain, and storm world states
+- [ ] Install and permanently wire the mounted speaker
+- [ ] Install relay hardware for fog / rain control
 - [ ] Build the motor valve and plumbing for the rain water system
-- [ ] Design and implement an 8-bottle dosing system with weekday recipes
 - [ ] Add atomizer to create fog effect
-- [ ] Add white led strip to simulate lighting strikes
-- [ ] Add sudo random weather effect selection system that deploys weather events randomly throughout the day
-- [ ] Find a better cable management solution
+- [ ] Add white LED strip to simulate lightning strikes
+- [ ] Refactor storm mode into phased sequencing (drizzle -> rain -> full storm -> fadeout)
+- [ ] Add random weather event selection system with day/time scheduling
+- [ ] Design and implement an 8-bottle dosing system with weekday recipes
+- [ ] Improve cabinet cable management
 
 ---
 
@@ -209,6 +231,23 @@ It is being developed into a full aquarium cabinet integration system that combi
 - cabinet-mounted electronics
 - future sound, plumbing, and dosing systems
 - real-world automation concepts
+
+---
+
+## Recent Progress
+
+Recent backend progress focused on cleaning and restructuring the control logic before additional hardware is connected.
+
+Completed:
+- separated hardware control functions from world-state logic
+- added drizzle and rain effect helpers
+- added basic storm mode composition
+- added scheduled storm mode trigger for daily testing
+- improved fallback behavior when GPIO hardware is not yet fully installed
+
+Current status:
+- thunder audio is physically working
+- rain and fog are currently simulated in software until relays and plumbing are installed
 
 ---
 
