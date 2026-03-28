@@ -15,9 +15,26 @@ const path = require('path');
 const express = require('express');
 const app = express();
 const bcrypt = require('bcrypt');
-const { Gpio } = require('onoff');
-const fogPin = new Gpio(17, 'out');
+// ---- GPIO (Fog) OPTIONAL ----
+let fogPin = null;
 
+try {
+  const { Gpio } = require('onoff');
+  fogPin = new Gpio(17, 'out'); // GPIO17 = physical pin 11
+  console.log('GPIO fogPin initialized (GPIO17)');
+} catch (err) {
+  console.log('GPIO disabled (onoff not installed yet):', err.message);
+}
+
+function setFog(on) {
+  if (!fogPin) {
+    console.log(on ? 'FOG ON (simulated)' : 'FOG OFF (simulated)');
+    return;
+  }
+  // active-low relay common; flip later if needed
+  fogPin.writeSync(on ? 0 : 1);
+  console.log(on ? 'FOG ON' : 'FOG OFF');
+}
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
@@ -42,8 +59,6 @@ process.on('SIGINT',  () => { try { setFog(false); } catch {} try { fogPin.unexp
 
 const PORT = 3000;
 const STATE_FILE = 'button-state.json';
-
-let worldState = 'clear';
 
 function setFog(on) { fogPin.writeSync(on ? 0 : 1); console.log(on ? 'FOG ON' : 'FOG OFF'); }
 
