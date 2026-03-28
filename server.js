@@ -385,29 +385,12 @@ app.get('/noise', (req, res) => {
     return res.send('Viewer cannot control system');
   }
 
-const result = startNoise(req.session.user.username);
-  res.send(result.message);
-
-  clearExpiredActions();
-
-  if (isActionActive('noise')) {
-    return res.send('Noise is already running 🔊');
+  if (isEStopActive()) {
+    return res.send('E-stop is active. Admin must reset the system.');
   }
 
-  if (noiseProcess) {
-    return res.send('Noise is already running 🔊');
-  }
-
-  noiseProcess = spawn('aplay', ['/home/pi/Tank-Magic/sounds/rain.wav']);
-
-  noiseProcess.on('exit', () => {
-    noiseProcess = null;
-  });
-
-  setActionActive('noise', req.session.user.username, 45);
-
-  console.log('🔊 Speaker activated');
-  res.send('Thunderstorm started 🌧️');
+  const result = startNoise(req.session.user.username);
+  return res.send(result.message);
 });
 
 app.get('/shrimp', (req, res) => {
