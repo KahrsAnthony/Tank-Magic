@@ -1,3 +1,6 @@
+
+// ---- Imports ----
+
 const { spawn } = require('child_process');
 let noiseProcess = null;
 
@@ -14,6 +17,7 @@ const app = express();
 const bcrypt = require('bcrypt');
 
 // ---- GPIO / Tank Controls ----
+
 let fogPin = null;
 
 try {
@@ -37,8 +41,16 @@ function setFog(on) {
   }
 }
 
-// ---- Drizzle World State ----
+function setRain(on) {
+  console.log(on ? 'RAIN ON (stub)' : 'RAIN OFF (stub)');
+}
 
+// ---- Weather State ----
+
+let worldState = 'clear';
+let drizzleTimeout = null;
+let drizzleActive = false;
+let rainActive = false;
 let worldState = 'clear'; // clear | drizzle | storm
 let drizzleTimeout = null;
 
@@ -59,7 +71,7 @@ function setWorldState(newState) {
 }
 
 function runDrizzleCycle() {
-  if (worldState !== 'drizzle') return;
+  if (!drizzleActive) return;
 
   const fogOnTime = randomBetween(7000, 14000);
   const fogOffTime = randomBetween(5000, 12000);
@@ -77,24 +89,52 @@ function runDrizzleCycle() {
   }, fogOnTime);
 }
 
+// ---Drizzle
 function startDrizzle() {
-  if (worldState === 'drizzle') {
-    return { ok: false, message: 'Drizzle already running' };
+  if (drizzleActive) {
+    return { ok: false, message: 'Drizzle already running 🌫️' };
   }
 
   clearDrizzleTimeout();
-  setWorldState('drizzle');
+  drizzleActive = true;
+  console.log('Drizzle effect -> ON');
   runDrizzleCycle();
 
-  return { ok: true, message: 'Drizzle started' };
+  return { ok: true, message: 'Drizzle started 🌫️' };
 }
 
 function stopDrizzle() {
   clearDrizzleTimeout();
+  drizzleActive = false;
   setFog(false);
-  setWorldState('clear');
+  console.log('Drizzle effect -> OFF');
 
   return { ok: true, message: 'Drizzle stopped' };
+}
+
+// --- Rain
+function startRain() {
+  if (rainActive) {
+    return { ok: false, message: 'Rain already running' };
+  }
+
+  rainActive = true;
+  setRain(true);
+  console.log('Rain effect -> ON');
+
+  return { ok: true, message: 'Rain started 🌧️' };
+}
+
+function stopRain() {
+  if (!rainActive) {
+    return { ok: false, message: 'Rain already stopped' };
+  }
+
+  rainActive = false;
+  setRain(false);
+  console.log('Rain effect -> OFF');
+
+  return { ok: true, message: 'Rain stopped' };
 }
 
 // ---- somehting ----
@@ -379,6 +419,8 @@ app.post('/login', async (req, res) => {
   res.redirect('/');
 });
 
+// ---- Routes ----
+
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/login.html');
@@ -394,6 +436,7 @@ app.get('/me', (req, res) => {
     role: req.session.user.role
   });
 });
+
 app.get('/', (req, res) => {
   if (!req.session.user) {
     return res.redirect('/login.html');
@@ -409,6 +452,26 @@ app.get('/login.html', (req, res) => {
 app.get('/button-state', (req, res) => {
   clearExpiredActions();
   res.json(readButtonState());
+});
+
+app.get('/drizzle', (req, res) => {
+  const blocked = !req.session.user || req.session.user.role === 'viewer';
+  logAction(req, 'drizzle', !blocked);
+
+  if (blocked) {
+    return res.send('Viewer cannot control system');
+  }
+
+  if (isEStopActive()) {
+    return res.send('E-stop is active. Admin must reset the system.');
+  }
+
+  const result =
+    worldState === 'drizzle'
+      ? stopDrizzle()
+      : startDrizzle();
+
+  return res.send(result.message);
 });
 
 app.get('/rain', (req, res) => {
