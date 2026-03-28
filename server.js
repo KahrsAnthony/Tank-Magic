@@ -23,7 +23,7 @@ try {
   fogPin = new Gpio(17, 'out'); // GPIO17 = physical pin 11
   console.log('GPIO fogPin initialized (GPIO17)');
 } catch (err) {
-  console.log('GPIO disabled (onoff not installed yet):', err.message);
+console.log('GPIO unavailable, using no-op fallback:', err.message);
 }
 
 function setFog(on) {
