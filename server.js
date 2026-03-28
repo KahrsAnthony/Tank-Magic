@@ -19,13 +19,19 @@ const bcrypt = require('bcrypt');
 // ---- GPIO / Tank Controls ----
 
 let fogPin = null;
+let rainPin = null;
 
 try {
   const { Gpio } = require('onoff');
+
   fogPin = new Gpio(17, 'out');
+  rainPin = new Gpio(27, 'out');
+
   console.log('GPIO fogPin initialized (GPIO17)');
+  console.log('GPIO rainPin initialized (GPIO27)');
+
 } catch (err) {
-  console.log('GPIO unavailable, using simulated fogPin:', err.message);
+  console.log('GPIO unavailable, using no-op fallback:', err.message);
 }
 
 function setFog(on) {
@@ -42,13 +48,20 @@ function setFog(on) {
 }
 
 function setRain(on) {
-  console.log(on ? 'RAIN ON (stub)' : 'RAIN OFF (stub)');
+  try {
+    if (rainPin) {
+      rainPin.writeSync(on ? 0 : 1); // active LOW relay
+      console.log(on ? 'RAIN ON' : 'RAIN OFF');
+    } else {
+      console.log(on ? 'RAIN ON (simulated)' : 'RAIN OFF (simulated)');
+    }
+  } catch (err) {
+    console.log('Rain write failed:', err.message);
+  }
 }
 
 // ---- Weather State ----
 
-let worldState = 'clear';
-let drizzleTimeout = null;
 let drizzleActive = false;
 let rainActive = false;
 let worldState = 'clear'; // clear | drizzle | storm
@@ -137,25 +150,37 @@ function stopRain() {
   return { ok: true, message: 'Rain stopped' };
 }
 
+// ----STORM
+function startStormMode() {
+  if (worldState === 'storm') {
+    return { ok: false, message: 'Storm already running ⛈️' };
+  }
+
+  setWorldState('storm');
+
+  startDrizzle();
+  startRain();
+  startNoise('system');
+
+  console.log('Storm Mode -> ON');
+
+  return { ok: true, message: 'Storm Mode started ⛈️' };
+}
+
+function stopStormMode() {
+  stopDrizzle();
+  stopRain();
+  stopNoiseSafely();
+
+  setWorldState('clear');
+
+  console.log('Storm Mode -> OFF');
+
+  return { ok: true, message: 'Storm Mode stopped' };
+}
+
 // ---- somehting ----
 
-try {
-  const { Gpio } = require('onoff');
-  fogPin = new Gpio(17, 'out'); // GPIO17 = physical pin 11
-  console.log('GPIO fogPin initialized (GPIO17)');
-} catch (err) {
-console.log('GPIO unavailable, using no-op fallback:', err.message);
-}
-
-function setFog(on) {
-  if (!fogPin) {
-    console.log(on ? 'FOG ON (simulated)' : 'FOG OFF (simulated)');
-    return;
-  }
-  // active-low relay common; flip later if needed
-  fogPin.writeSync(on ? 0 : 1);
-  console.log(on ? 'FOG ON' : 'FOG OFF');
-}
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public'));
@@ -496,6 +521,26 @@ if (isEStopActive()) {
 
   console.log('🌧️ Water valve activated');
   res.send('Rain cycle started');
+});
+
+app.get('/storm', (req, res) => {
+  const blocked = !req.session.user || req.session.user.role === 'viewer';
+  logAction(req, 'storm', !blocked);
+
+  if (blocked) {
+    return res.send('Viewer cannot control system');
+  }
+
+  if (isEStopActive()) {
+    return res.send('E-stop is active. Admin must reset the system.');
+  }
+
+  const result =
+    worldState === 'storm'
+      ? stopStormMode()
+      : startStormMode();
+
+  return res.send(result.message);
 });
 
 app.get('/dose', (req, res) => {
