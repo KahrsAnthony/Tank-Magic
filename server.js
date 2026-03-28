@@ -5,9 +5,6 @@ const SCHEDULED_NOISE_HOUR = 20;
 const SCHEDULED_NOISE_MINUTE = 0;
 let lastScheduledNoiseRun = null;
 
-let worldState = 'clear'; // 'clear' | 'drizzle' | 'storm'
-let fogPulseTimeout = null;
-
 const fs = require('fs');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
@@ -15,8 +12,92 @@ const path = require('path');
 const express = require('express');
 const app = express();
 const bcrypt = require('bcrypt');
-// ---- GPIO (Fog) OPTIONAL ----
+
+// ---- GPIO / Tank Controls ----
 let fogPin = null;
+
+try {
+  const { Gpio } = require('onoff');
+  fogPin = new Gpio(17, 'out');
+  console.log('GPIO fogPin initialized (GPIO17)');
+} catch (err) {
+  console.log('GPIO unavailable, using simulated fogPin:', err.message);
+}
+
+function setFog(on) {
+  try {
+    if (fogPin) {
+      fogPin.writeSync(on ? 0 : 1);
+      console.log(on ? 'FOG ON' : 'FOG OFF');
+    } else {
+      console.log(on ? 'FOG ON (simulated)' : 'FOG OFF (simulated)');
+    }
+  } catch (err) {
+    console.log('Fog write failed:', err.message);
+  }
+}
+
+// ---- Drizzle World State ----
+
+let worldState = 'clear'; // clear | drizzle | storm
+let drizzleTimeout = null;
+
+function randomBetween(minMs, maxMs) {
+  return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
+}
+
+function clearDrizzleTimeout() {
+  if (drizzleTimeout) {
+    clearTimeout(drizzleTimeout);
+    drizzleTimeout = null;
+  }
+}
+
+function setWorldState(newState) {
+  worldState = newState;
+  console.log(`World state -> ${worldState}`);
+}
+
+function runDrizzleCycle() {
+  if (worldState !== 'drizzle') return;
+
+  const fogOnTime = randomBetween(7000, 14000);
+  const fogOffTime = randomBetween(5000, 12000);
+
+  setFog(true);
+  console.log(`Drizzle fog ON for ${fogOnTime}ms`);
+
+  drizzleTimeout = setTimeout(() => {
+    setFog(false);
+    console.log(`Drizzle fog OFF for ${fogOffTime}ms`);
+
+    drizzleTimeout = setTimeout(() => {
+      runDrizzleCycle();
+    }, fogOffTime);
+  }, fogOnTime);
+}
+
+function startDrizzle() {
+  if (worldState === 'drizzle') {
+    return { ok: false, message: 'Drizzle already running' };
+  }
+
+  clearDrizzleTimeout();
+  setWorldState('drizzle');
+  runDrizzleCycle();
+
+  return { ok: true, message: 'Drizzle started' };
+}
+
+function stopDrizzle() {
+  clearDrizzleTimeout();
+  setFog(false);
+  setWorldState('clear');
+
+  return { ok: true, message: 'Drizzle stopped' };
+}
+
+// ---- somehting ----
 
 try {
   const { Gpio } = require('onoff');
