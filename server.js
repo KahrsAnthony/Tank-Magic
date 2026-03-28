@@ -60,8 +60,6 @@ process.on('SIGINT',  () => { try { setFog(false); } catch {} try { fogPin.unexp
 const PORT = 3000;
 const STATE_FILE = 'button-state.json';
 
-function setFog(on) { fogPin.writeSync(on ? 0 : 1); console.log(on ? 'FOG ON' : 'FOG OFF'); }
-
 setInterval(() => {
   if (worldState === 'drizzle') {
     console.log('World state is drizzle, triggering fog');
@@ -127,12 +125,6 @@ function startNoise(username = 'system') {
 
 function randomBetween(minMs, maxMs) {
   return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
-}
-
-function setFog(on) {
-  // replace this with GPIO PIN Number
-  // fogPin.writeSync(on ? 1 : 0);
-  console.log(on ? 'FOG ON' : 'FOG OFF');
 }
 
 function setWorldState(newState) {
