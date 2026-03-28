@@ -4,9 +4,10 @@
 const { spawn } = require('child_process');
 let noiseProcess = null;
 
-const SCHEDULED_NOISE_HOUR = 20;
-const SCHEDULED_NOISE_MINUTE = 0;
-let lastScheduledNoiseRun = null;
+const SCHEDULED_STORM_HOUR = 20;
+const SCHEDULED_STORM_MINUTE = 0;
+
+let lastScheduledStormRun = null;
 
 const fs = require('fs');
 const session = require('express-session');
@@ -668,8 +669,26 @@ function clearEStop(username) {
 
   writeButtonState(state);
 }
+// ----TIME
 
-setInterval(checkScheduledNoise, 30000);
+setInterval(() => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const todayKey = now.toDateString();
+
+  if (
+    currentHour === SCHEDULED_STORM_HOUR &&
+    currentMinute === SCHEDULED_STORM_MINUTE &&
+    lastScheduledStormRun !== todayKey
+  ) {
+    if (!isEStopActive() && worldState === 'clear') {
+      const result = startStormMode();
+      console.log(`Scheduled storm check -> ${result.message}`);
+      lastScheduledStormRun = todayKey;
+    }
+  }
+}, 30000);
 
 app.listen(3000, '0.0.0.0', () => {
   console.log('Server running at http://localhost:3000');
