@@ -101,15 +101,63 @@ The aquarium is currently powered through a central power strip, with dedicated 
 
 This layout serves as the baseline for future integration.
 
-## Current Hardware Progress
+---
 
-Tank Magic is now physically deployed inside the aquarium cabinet.
+## Latest Hardware Progress (March 2026)
 
-The current hardware build is focused on:
-- safe placement of electronics
-- cable routing
-- future expansion room
-- keeping control hardware high and away from water exposure
+Tank Magic has officially transitioned from a software-only project into a live hardware-integrated system.
+
+### GPIO + Hardware Control
+- Migrated from `onoff` (sysfs) to `pinctrl` due to kernel compatibility issues
+- Confirmed stable GPIO control on Raspberry Pi
+- Fog relay and rain relay pins are now controlled through backend logic
+
+### Water Level Sensor (Float Switch)
+- Float switch installed and wired to **GPIO 22**
+- Configured with internal pull-up (`pinctrl set 22 ip pu`)
+- Verified real-time switching between HIGH and LOW states
+- Backend logic correctly interprets:
+  - `LOW` → water level low (`waterLow = true`)
+  - `HIGH` → water level safe (`waterLow = false`)
+
+### Backend Integration
+- Added `/api/status` endpoint returning:
+  - `waterLow`
+  - `fogActive`
+  - `rainActive`
+  - `noiseActive`
+- First complete loop achieved:
+  > Physical sensor → GPIO → backend → API → UI-ready data
+
+### System Milestone
+This marks the first fully functional hardware feedback system in Tank Magic.
+
+---
+
+## Build Photos
+
+### Tank Full Update
+![Tank Full Update](screenshots/tank-full-update.png)
+
+### Float Switch Wiring (GPIO)
+![Pin Wires Float Switch](screenshots/pin-wires-float-switch.png)
+
+### Float Switch Installed in Tank
+![Float Switch in Tank](screenshots/float-switch-in-tank.png)
+
+### Float Switch Mounted at Top
+![Float Switch Top](screenshots/float-switch-top.png)
+
+---
+
+## Dev Log
+
+### 2026-03-29
+- Replaced broken GPIO system (`onoff`) with `pinctrl`
+- Brought real GPIO control online
+- Installed and validated float switch sensor
+- Confirmed live water-level readings via API
+- Established first hardware → backend integration loop
 
 ### Hardware Overview
 
