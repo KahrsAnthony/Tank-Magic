@@ -21,18 +21,44 @@ const bcrypt = require('bcrypt');
 
 let fogPin = null;
 let rainPin = null;
+let waterLevelPin = null;
+
+let gpioStatus = {
+  fog: false,
+  rain: false,
+  water: false
+};
+
+let Gpio = null;
 
 try {
-  const { Gpio } = require('onoff');
-
-  fogPin = new Gpio(17, 'out');
-  rainPin = new Gpio(27, 'out');
-
-  console.log('GPIO fogPin initialized (GPIO17)');
-  console.log('GPIO rainPin initialized (GPIO27)');
-
+  ({ Gpio } = require('onoff'));
+  console.log('onoff loaded');
 } catch (err) {
-  console.log('GPIO unavailable, using no-op fallback:', err.message);
+  console.error('onoff failed:', err.message);
+}
+
+if (Gpio) {
+  try {
+    fogPin = new Gpio(17, 'out');
+    console.log('fogPin OK');
+  } catch (err) {
+    console.error('fogPin FAILED:', err.message);
+  }
+
+  try {
+    rainPin = new Gpio(27, 'out');
+    console.log('rainPin OK');
+  } catch (err) {
+    console.error('rainPin FAILED:', err.message);
+  }
+
+  try {
+    waterLevelPin = new Gpio(22, 'in');
+    console.log('waterLevelPin OK');
+  } catch (err) {
+    console.error('waterLevelPin FAILED:', err.message);
+  }
 }
 
 function setFog(on) {
@@ -58,6 +84,18 @@ function setRain(on) {
     }
   } catch (err) {
     console.log('Rain write failed:', err.message);
+  }
+}
+
+function getWaterLevelStatus() {
+  if (!waterLevelPin) return 'UNKNOWN';
+
+  try {
+    const value = waterLevelPin.readSync();
+    return value === 1 ? 'OKAY' : 'LOW';
+  } catch (err) {
+    console.log('Error reading water level pin:', err.message);
+    return 'UNKNOWN';
   }
 }
 
@@ -470,6 +508,27 @@ app.get('/button-state', (req, res) => {
   res.json(readButtonState());
 });
 
+app.get('/api/tank-status', (req, res) => {
+  let raw = null;
+  let waterLevel = 'GPIO OFFLINE';
+
+  try {
+    if (waterLevelPin) {
+      raw = waterLevelPin.readSync();
+      waterLevel = raw === 1 ? 'OKAY' : 'LOW';
+    }
+  } catch (err) {
+    waterLevel = 'READ ERROR';
+  }
+
+  res.json({
+    waterLevel,
+    waterRaw: raw,
+    temperature: null,
+    gpioStatus
+  });
+});
+
 app.get('/drizzle', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
   logAction(req, 'drizzle', !blocked);
@@ -542,12 +601,15 @@ app.get('/storm', (req, res) => {
   }
 
   updateLastPressed('storm', req.session.user.username);
-  setMomentaryActive('storm', req.session.user.username, 10);
 
-  const result =
-    worldState === 'storm'
-      ? stopStormMode()
-      : startStormMode();
+  if (worldState === 'storm') {
+    const result = stopStormMode();
+    return res.send(result.message);
+  }
+
+  setMomentaryActive('storm', req.session.user.username, 45);
+
+  const result = startStormMode();
 
   console.log('🌧️ Storm rolling in 🌧️');
   return res.send(result.message);
@@ -660,13 +722,19 @@ setInterval(() => {
     currentMinute === SCHEDULED_STORM_MINUTE &&
     lastScheduledStormRun !== todayKey
   ) {
-    if (!isEStopActive() && worldState === 'clear') {
-      const result = startStormMode();
-      console.log(`Scheduled storm check -> ${result.message}`);
+    if (isEStopActive()) {
+      console.log('Scheduled storm skipped: E-stop active');
+      return;
+    }
+
+    const result = startStormMode();
+    console.log(`Scheduled storm check -> ${result.message}`);
+
+    if (result.ok) {
       lastScheduledStormRun = todayKey;
     }
   }
-}, 30000);
+}, 20000);
 
 app.listen(3000, '0.0.0.0', () => {
   console.log('Server running at http://localhost:3000');
