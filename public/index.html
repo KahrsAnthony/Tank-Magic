@@ -248,8 +248,14 @@ button div:first-child {
     <h1>🌿 Tank Magic</h1>
     <p class="subtitle">🦐 Cute little ecosystem controller 🦐</p>
 
+<div id="tankStatus">
+  <strong>Tank Status:</strong><br>
+  Water level: <span id="waterLevel">--</span><br>
+  Temperature: <span id="temperature">--</span> °F
+</div>
+
 <button class="rain" data-control="true" onclick="sendCommand('storm', event)">
-  <div>⛈️ Storm Mode <span id="stormStatus">🔴</span></div>
+ <div>⛈️ Storm Mode <span id="stormStatus">🔴</span></div>
   <div class="last-pressed" id="stormLast">Storm inactive</div>
 </button>
 
@@ -322,6 +328,22 @@ function formatRemaining(ms) {
   const seconds = totalSeconds % 60;
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
+
+async function updateTankStatus() {
+  try {
+    const res = await fetch('/api/tank-status');
+    const data = await res.json();
+
+    document.getElementById('waterLevel').textContent = data.waterLevel || '--';
+    document.getElementById('temperature').textContent =
+      data.temperature == null ? '--' : data.temperature;
+  } catch (err) {
+    console.error('Failed to fetch tank status:', err);
+  }
+}
+
+updateTankStatus();
+setInterval(updateTankStatus, 3000);
 
 async function loadButtonState() {
   try {
