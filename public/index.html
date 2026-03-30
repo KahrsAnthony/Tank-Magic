@@ -63,6 +63,92 @@ body.storm-active::before {
       box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
     }
 
+.panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.panel > * {
+  position: relative;
+  z-index: 2;
+}
+
+.shrimp-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.shrimp {
+  position: absolute;
+  font-size: 20px;
+  opacity: 0.45;
+  filter: blur(0.2px);
+  will-change: transform, left;
+}
+
+.s1 {
+  top: 12%;
+  animation: shrimpSwim1 18s linear infinite;
+}
+
+.s2 {
+  top: 32%;
+  animation: shrimpSwim2 23s linear infinite;
+}
+
+.s3 {
+  top: 56%;
+  animation: shrimpSwim3 20s linear infinite;
+}
+
+.s4 {
+  top: 78%;
+  animation: shrimpSwim4 26s linear infinite;
+}
+
+.s5 {
+  top: 22%;
+  animation: shrimpSwim3 29s linear infinite;
+  animation-delay: -8s;
+}
+
+.s6 {
+  top: 68%;
+  animation: shrimpSwim2 17s linear infinite;
+  animation-delay: -13s;
+}
+
+@keyframes shrimpSwim1 {
+  0%   { left: -40px; transform: translateY(0px) scaleX(1); }
+  25%  { transform: translateY(-4px) scaleX(1); }
+  50%  { transform: translateY(2px) scaleX(1); }
+  100% { left: 110%; transform: translateY(-2px) scaleX(1); }
+}
+
+@keyframes shrimpSwim2 {
+  0%   { left: 110%; transform: translateY(0px) scaleX(-1); }
+  25%  { transform: translateY(3px) scaleX(-1); }
+  50%  { transform: translateY(-3px) scaleX(-1); }
+  100% { left: -40px; transform: translateY(1px) scaleX(-1); }
+}
+
+@keyframes shrimpSwim3 {
+  0%   { left: -50px; transform: translateY(0px) scaleX(1); }
+  30%  { transform: translateY(2px) scaleX(1); }
+  60%  { transform: translateY(-4px) scaleX(1); }
+  100% { left: 110%; transform: translateY(0px) scaleX(1); }
+}
+
+@keyframes shrimpSwim4 {
+  0%   { left: 105%; transform: translateY(0px) scaleX(-1); }
+  35%  { transform: translateY(-3px) scaleX(-1); }
+  70%  { transform: translateY(3px) scaleX(-1); }
+  100% { left: -45px; transform: translateY(0px) scaleX(-1); }
+}
+
     h1 {
       margin: 0 0 8px 0;
       font-size: 32px;
@@ -74,47 +160,47 @@ body.storm-active::before {
       opacity: 0.9;
     }
 
-    button {
-      width: 100%;
-      padding: 18px;
-      margin: 10px 0;
-      font-size: 18px;
-      font-weight: bold;
-      color: white;
-      border: none;
-      border-radius: 16px;
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
-    }
+button {
+  width: 100%;
+  padding: 18px;
+  margin: 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
 
-    button:hover {
-      transform: scale(1.03);
-      opacity: 0.95;
-    }
+button:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
 
-    .rain {
-      background: linear-gradient(135deg, #60a5fa, #3b82f6);
-      box-shadow: 0 0 18px rgba(96, 165, 250, 0.45);
-    }
+button:active {
+  transform: scale(0.98);
+}
 
-    .feed {
-      background: linear-gradient(135deg, #34d399, #10b981);
-      box-shadow: 0 0 18px rgba(52, 211, 153, 0.45);
-    }
+.rain {
+  background: linear-gradient(90deg, #4a505f, #0b0d12);
+}
 
-    .noise {
-      background: linear-gradient(135deg, #f9a8d4, #ec4899);
-      box-shadow: 0 0 18px rgba(236, 72, 153, 0.45);
-    }
+body.storm-active .rain {
+  box-shadow: 0 0 18px rgba(120, 140, 200, 0.25);
+}
 
-    .stop {
-      background: linear-gradient(135deg, #f87171, #ef4444);
-      box-shadow: 0 0 18px rgba(239, 68, 68, 0.45);
-      margin-top: 16px;
-    }
+.feed {
+  background: linear-gradient(90deg, #2e8b57, #0d1f14);
+}
+
+.stop {
+  background: linear-gradient(90deg, #b33939, #2a0a0a);
+}
+
 .feedShrimp {
-  background: linear-gradient(135deg, #fb923c, #f97316);
-  box-shadow: 0 0 18px rgba(249,115,22,0.5);
+  background: linear-gradient(90deg, #ff8c42, #2a1205);
 }
 
     #status {
@@ -165,6 +251,15 @@ button div:first-child {
 <button class="stop" id="resetStopButton" style="display:none;" onclick="sendCommand('reset-stop')">
   <div>✅ Reset E-stop</div>
 </button>
+
+<div class="shrimp-layer" aria-hidden="true">
+  <span class="shrimp s1">🦐</span>
+  <span class="shrimp s2">🦐</span>
+  <span class="shrimp s3">🦐</span>
+  <span class="shrimp s4">🦐</span>
+  <span class="shrimp s5">🦐</span>
+  <span class="shrimp s6">🦐</span>
+</div>
 
     <div id="status">Waiting for command...</div>
   </div>
