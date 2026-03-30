@@ -63,6 +63,26 @@ body.storm-active::before {
       box-shadow: 0 10px 35px rgba(0, 0, 0, 0.35);
     }
 
+.emoji-burst {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+  font-size: 22px;
+  will-change: transform, opacity;
+  animation: emojiBurst 700ms ease-out forwards;
+}
+
+@keyframes emojiBurst {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) scale(0.7) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(1.35) rotate(var(--rot));
+  }
+}
+
 .panel {
   position: relative;
   overflow: hidden;
@@ -228,22 +248,22 @@ button div:first-child {
     <h1>🌿 Tank Magic</h1>
     <p class="subtitle">🦐 Cute little ecosystem controller 🦐</p>
 
-<button class="rain" data-control="true" onclick="sendCommand('storm')">
+<button class="rain" data-control="true" onclick="sendCommand('storm', event)">
   <div>⛈️ Storm Mode <span id="stormStatus">🔴</span></div>
   <div class="last-pressed" id="stormLast">Storm inactive</div>
 </button>
 
-<button class="feed" data-control="true" onclick="sendCommand('dose')">
+<button class="feed" data-control="true" onclick="sendCommand('dose', event)">
   <div>🌱 Feed the plants! <span id="doseStatus">🔴</span></div>
   <div class="last-pressed" id="doseLast">Last pressed: never</div>
 </button>
 
-<button class="feedShrimp" data-control="true" onclick="sendCommand('shrimp')">
+<button class="feedShrimp" data-control="true" onclick="sendCommand('shrimp', event)">
   <div>🍤 Feed the shrimp! <span id="shrimpStatus">🔴</span></div>
   <div class="last-pressed" id="shrimpLast">Last pressed: never</div>
 </button>
 
-<button class="stop" data-control="true" onclick="sendCommand('stop')">
+<button class="stop" data-control="true" onclick="sendCommand('stop', event)">
   <div>🛑 Stop everything <span id="stopStatus">🔴</span></div>
   <div class="last-pressed" id="stopLast">E-stop: inactive</div>
 </button>
@@ -417,7 +437,51 @@ if (stopStatus) {
   }
 }
 
-async function sendCommand(action) {
+function burstFromButton(button, emoji, count = 8) {
+  const rect = button.getBoundingClientRect();
+  const startX = rect.left + rect.width / 2;
+  const startY = rect.top + rect.height / 2;
+
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElement('span');
+    particle.className = 'emoji-burst';
+    particle.textContent = emoji;
+
+    const angle = Math.random() * Math.PI * 2;
+    const distance = 35 + Math.random() * 55;
+    const dx = `${Math.cos(angle) * distance}px`;
+    const dy = `${Math.sin(angle) * distance}px`;
+    const rot = `${Math.floor(Math.random() * 180 - 90)}deg`;
+
+    particle.style.left = `${startX}px`;
+    particle.style.top = `${startY}px`;
+    particle.style.setProperty('--dx', dx);
+    particle.style.setProperty('--dy', dy);
+    particle.style.setProperty('--rot', rot);
+
+    document.body.appendChild(particle);
+
+    particle.addEventListener('animationend', () => {
+      particle.remove();
+    });
+  }
+}
+
+function getBurstEmoji(action) {
+  if (action === 'dose') return '🧪';
+  if (action === 'shrimp') return '🦐';
+  if (action === 'storm') return '⚡';
+  if (action === 'stop') return '🛑';
+  return '✨';
+}
+
+async function sendCommand(action, event) {
+
+const button = event?.currentTarget || document.querySelector(`button[onclick="sendCommand('${action}')"]`);
+if (button) {
+  burstFromButton(button, getBurstEmoji(action));
+}
+
   const status = document.getElementById('status');
 
   const statusMap = {
