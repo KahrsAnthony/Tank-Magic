@@ -241,6 +241,16 @@ button div:first-child {
   font-size: 18px;
   font-weight: bold;
 }
+
+#waterLevel.okay {
+  color: #00ff88;
+  font-weight: bold;
+}
+
+#waterLevel.low {
+  color: #ffd000;
+  font-weight: bold;
+}
   </style>
 </head>
 <body>
@@ -334,11 +344,21 @@ async function updateTankStatus() {
     const res = await fetch('/api/tank-status');
     const data = await res.json();
 
-    document.getElementById('waterLevel').textContent = data.waterLevel || '--';
-    document.getElementById('temperature').textContent =
-      data.temperature == null ? '--' : data.temperature;
+    const el = document.getElementById('waterLevel');
+
+    el.textContent = data.waterLevel;
+
+    // reset classes
+    el.classList.remove('okay', 'low');
+
+    if (data.waterLevel === 'OKAY') {
+      el.classList.add('okay');
+    } else if (data.waterLevel === 'LOW') {
+      el.classList.add('low');
+    }
+
   } catch (err) {
-    console.error('Failed to fetch tank status:', err);
+    console.error('Tank status error:', err);
   }
 }
 
