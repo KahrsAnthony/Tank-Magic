@@ -112,19 +112,14 @@ button div:first-child {
     <h1>🌿 Tank Magic</h1>
     <p class="subtitle">🦐 Cute little ecosystem controller 🦐</p>
 
-<button class="rain" data-control="true" onclick="sendCommand('rain')">
-  <div>🌧️ Make it rain! <span id="rainStatus">🔴</span></div>
-  <div class="last-pressed" id="rainLast">Rain timer: inactive</div>
+<button class="rain" data-control="true" onclick="sendCommand('storm')">
+  <div>⛈️ Storm Mode <span id="stormStatus">🔴</span></div>
+  <div class="last-pressed" id="stormLast">Storm inactive</div>
 </button>
 
 <button class="feed" data-control="true" onclick="sendCommand('dose')">
   <div>🌱 Feed the plants! <span id="doseStatus">🔴</span></div>
   <div class="last-pressed" id="doseLast">Last pressed: never</div>
-</button>
-
-<button class="noise" data-control="true" onclick="sendCommand('noise')">
-  <div>🔊 Make some noise! <span id="noiseStatus">🔴</span></div>
-  <div class="last-pressed" id="noiseLast">Noise timer: inactive</div>
 </button>
 
 <button class="feedShrimp" data-control="true" onclick="sendCommand('shrimp')">
@@ -144,13 +139,13 @@ button div:first-child {
     <div id="status">Waiting for command...</div>
   </div>
 <script>
-  const lastPressedMap = {
-    dose: 'doseLast',
-    shrimp: 'shrimpLast',
-    rain: 'rainLast',
-    noise: 'noiseLast',
-    stop: 'stopLast'
-  };
+
+const lastPressedMap = {
+  dose: 'doseLast',
+  shrimp: 'shrimpLast',
+  storm: 'stormLast',
+  stop: 'stopLast'
+};
 
 let currentUserRole = null;
 
@@ -301,10 +296,10 @@ if (stopStatus) {
     const status = document.getElementById('status');
 
     const statusMap = {
-      rain: 'rainStatus',
       dose: 'doseStatus',
-      noise: 'noiseStatus',
-      shrimp: 'shrimpStatus'
+      shrimp: 'shrimpStatus',
+      storm: 'stormStatus',
+      stop: 'stopStatus'
     };
 
     try {
@@ -338,10 +333,9 @@ if (action === 'stop') {
   const response = await fetch('/stop');
   const text = await response.text();
 
-  document.getElementById('rainStatus').textContent = '🔴';
   document.getElementById('doseStatus').textContent = '🔴';
-  document.getElementById('noiseStatus').textContent = '🔴';
   document.getElementById('shrimpStatus').textContent = '🔴';
+  document.getElementById('stormStatus').textContent = '🔴';
   document.getElementById('stopStatus').textContent = '🔴';
 
   status.textContent = text;
@@ -360,18 +354,19 @@ if (action === 'reset-stop') {
 const indicatorId = statusMap[action];
 const indicator = document.getElementById(indicatorId);
 
-if (!indicator) {
-  status.textContent = 'Unknown control';
-  return;
-}
-
-if (action === 'rain' || action === 'noise') {
-  const response = await fetch('/' + action);
+if (action === 'storm') {
+  const response = await fetch('/storm');
   const text = await response.text();
   status.textContent = text;
   await loadButtonState();
   return;
 }
+
+if (!indicator) {
+  status.textContent = 'Unknown control';
+  return;
+}
+
 
 const isCurrentlyOn = indicator.textContent === '🟢';
 

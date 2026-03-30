@@ -168,18 +168,6 @@ function startStormMode() {
   return { ok: true, message: 'Storm Mode started ⛈️' };
 }
 
-function stopStormMode() {
-  stopDrizzle();
-  stopRain();
-  stopNoiseSafely();
-
-  setWorldState('clear');
-
-  console.log('Storm Mode -> OFF');
-
-  return { ok: true, message: 'Storm Mode stopped' };
-}
-
 // ---- somehting ----
 
 app.use(express.urlencoded({ extended: true }));
@@ -321,7 +309,7 @@ function stopDrizzle() {
   console.log('Drizzle stopped');
 }
 
-function checkScheduledNoise() {
+function checkScheduledStorm() {
   const now = new Date();
 
   const runKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
@@ -331,14 +319,16 @@ function checkScheduledNoise() {
     now.getMinutes() === SCHEDULED_NOISE_MINUTE &&
     lastScheduledNoiseRun !== runKey
   ) {
-    const result = startNoise('system');
+    const result = startStormMode();
 
     if (result.ok) {
-      logSystemAction('noise', true);
+      logSystemAction('storm', true);
+      updateLastPressed('storm', 'system');
+      setActionActive('storm', 'system', 10);
       lastScheduledNoiseRun = runKey;
-      console.log('⏰ Scheduled noise started');
+      console.log('⏰ Scheduled storm started');
     } else {
-      console.log(`⏰ Scheduled noise skipped: ${result.message}`);
+      console.log(`⏰ Scheduled storm skipped: ${result.message}`);
     }
   }
 }
@@ -524,26 +514,6 @@ if (isEStopActive()) {
   res.send('Rain cycle started');
 });
 
-app.get('/storm', (req, res) => {
-  const blocked = !req.session.user || req.session.user.role === 'viewer';
-  logAction(req, 'storm', !blocked);
-
-  if (blocked) {
-    return res.send('Viewer cannot control system');
-  }
-
-  if (isEStopActive()) {
-    return res.send('E-stop is active. Admin must reset the system.');
-  }
-
-  const result =
-    worldState === 'storm'
-      ? stopStormMode()
-      : startStormMode();
-
-  return res.send(result.message);
-});
-
 app.get('/dose', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
   logAction(req, 'dose', !blocked);
@@ -559,9 +529,9 @@ app.get('/dose', (req, res) => {
   res.send('Plant food added');
 });
 
-app.get('/noise', (req, res) => {
+app.get('/storm', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
-  logAction(req, 'noise', !blocked);
+  logAction(req, 'storm', !blocked);
 
   if (blocked) {
     return res.send('Viewer cannot control system');
@@ -571,7 +541,15 @@ app.get('/noise', (req, res) => {
     return res.send('E-stop is active. Admin must reset the system.');
   }
 
-  const result = startNoise(req.session.user.username);
+  updateLastPressed('storm', req.session.user.username);
+  setMomentaryActive('storm', req.session.user.username, 10);
+
+  const result =
+    worldState === 'storm'
+      ? stopStormMode()
+      : startStormMode();
+
+  console.log('🌧️ Storm rolling in 🌧️');
   return res.send(result.message);
 });
 
