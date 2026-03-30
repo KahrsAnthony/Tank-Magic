@@ -32,39 +32,42 @@ let gpioStatus = {
 let Gpio = null;
 
 try {
-  ({ Gpio } = require('onoff'));
-  console.log('onoff loaded');
+  ({ Gpio } = require('pigpio'));
+  console.log('pigpio loaded');
 } catch (err) {
-  console.error('onoff failed:', err.message);
+  console.error('pigpio load failed:', err.message);
 }
 
 if (Gpio) {
   try {
-    fogPin = new Gpio(17, 'out');
-    console.log('fogPin OK');
+    fogPin = new Gpio(17, { mode: Gpio.OUTPUT });
+    gpioStatus.fog = true;
+    console.log('fogPin initialized (GPIO17)');
   } catch (err) {
-    console.error('fogPin FAILED:', err.message);
+    console.error('fogPin init failed:', err.message);
   }
 
   try {
-    rainPin = new Gpio(27, 'out');
-    console.log('rainPin OK');
+    rainPin = new Gpio(27, { mode: Gpio.OUTPUT });
+    gpioStatus.rain = true;
+    console.log('rainPin initialized (GPIO27)');
   } catch (err) {
-    console.error('rainPin FAILED:', err.message);
+    console.error('rainPin init failed:', err.message);
   }
 
   try {
-    waterLevelPin = new Gpio(22, 'in');
-    console.log('waterLevelPin OK');
+    waterLevelPin = new Gpio(22, { mode: Gpio.INPUT });
+    gpioStatus.water = true;
+    console.log('waterLevelPin initialized (GPIO22)');
   } catch (err) {
-    console.error('waterLevelPin FAILED:', err.message);
+    console.error('waterLevelPin init failed:', err.message);
   }
 }
 
 function setFog(on) {
   try {
     if (fogPin) {
-      fogPin.writeSync(on ? 0 : 1);
+      fogPin.digitalWrite(on ? 0 : 1); // active-low relay
       console.log(on ? 'FOG ON' : 'FOG OFF');
     } else {
       console.log(on ? 'FOG ON (simulated)' : 'FOG OFF (simulated)');
@@ -77,7 +80,7 @@ function setFog(on) {
 function setRain(on) {
   try {
     if (rainPin) {
-      rainPin.writeSync(on ? 0 : 1); // active LOW relay
+      rainPin.digitalWrite(on ? 0 : 1); // active-low relay
       console.log(on ? 'RAIN ON' : 'RAIN OFF');
     } else {
       console.log(on ? 'RAIN ON (simulated)' : 'RAIN OFF (simulated)');
@@ -88,14 +91,14 @@ function setRain(on) {
 }
 
 function getWaterLevelStatus() {
-  if (!waterLevelPin) return 'UNKNOWN';
+  if (!waterLevelPin) return 'GPIO OFFLINE';
 
   try {
-    const value = waterLevelPin.readSync();
+    const value = waterLevelPin.digitalRead();
     return value === 1 ? 'OKAY' : 'LOW';
   } catch (err) {
     console.log('Error reading water level pin:', err.message);
-    return 'UNKNOWN';
+    return 'READ ERROR';
   }
 }
 
@@ -514,7 +517,7 @@ app.get('/api/tank-status', (req, res) => {
 
   try {
     if (waterLevelPin) {
-      raw = waterLevelPin.readSync();
+      raw = waterLevelPin.digitalRead();
       waterLevel = raw === 1 ? 'OKAY' : 'LOW';
     }
   } catch (err) {
