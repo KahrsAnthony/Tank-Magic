@@ -21,8 +21,38 @@
       min-height: 100vh;
     }
 
+body.storm-active::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: transparent;
+  animation: lightningFlash 4s infinite;
+  z-index: 0;
+}
+
+@keyframes lightningFlash {
+  0%, 92%, 100% {
+    background: rgba(255, 255, 255, 0);
+  }
+  93% {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  94% {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  95% {
+    background: rgba(255, 255, 255, 0.12);
+  }
+  96% {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
     .panel {
-      width: 90%;
+     position: relative;
+     z-index: 1; 
+     width: 90%;
       max-width: 430px;
       text-align: center;
       background: rgba(255, 255, 255, 0.10);
@@ -292,42 +322,57 @@ if (stopStatus) {
   }
 }
 
-  async function sendCommand(action) {
-    const status = document.getElementById('status');
+async function sendCommand(action) {
+  const status = document.getElementById('status');
 
-    const statusMap = {
-      dose: 'doseStatus',
-      shrimp: 'shrimpStatus',
-      storm: 'stormStatus',
-      stop: 'stopStatus'
-    };
+  const statusMap = {
+    dose: 'doseStatus',
+    shrimp: 'shrimpStatus',
+    storm: 'stormStatus',
+    stop: 'stopStatus'
+  };
 
-    try {
-      if (action === 'dose' || action === 'shrimp') {
-        const stateResponse = await fetch('/button-state');
-        const state = await stateResponse.json();
-        const lastInfo = state[action];
+  try {
+    if (action === 'dose' || action === 'shrimp') {
+      const stateResponse = await fetch('/button-state');
+      const state = await stateResponse.json();
+      const lastInfo = state[action];
 
-        if (lastInfo) {
-          const lastDate = new Date(lastInfo.time);
-          const now = new Date();
+      if (lastInfo) {
+        const lastDate = new Date(lastInfo.time);
+        const now = new Date();
 
-          const sameDay =
-            lastDate.getFullYear() === now.getFullYear() &&
-            lastDate.getMonth() === now.getMonth() &&
-            lastDate.getDate() === now.getDate();
+        const sameDay =
+          lastDate.getFullYear() === now.getFullYear() &&
+          lastDate.getMonth() === now.getMonth() &&
+          lastDate.getDate() === now.getDate();
 
-          if (sameDay) {
-            const confirmed = confirm(
-              `${action} was already pressed today by ${lastInfo.user} at ${lastDate.toLocaleTimeString()}. Press it again?`
-            );
+        if (sameDay) {
+          const confirmed = confirm(
+            `${action} was already pressed today by ${lastInfo.user} at ${lastDate.toLocaleTimeString()}. Press it again?`
+          );
 
-            if (!confirmed) {
-              return;
-            }
+          if (!confirmed) {
+            return;
           }
         }
       }
+    }
+
+    if (action === 'storm') {
+      const response = await fetch('/storm');
+      const text = await response.text();
+      status.textContent = text;
+
+      if (text.toLowerCase().includes('stopped') || text.toLowerCase().includes('off')) {
+        document.body.classList.remove('storm-active');
+      } else {
+        document.body.classList.add('storm-active');
+      }
+
+      await loadButtonState();
+      return;
+    }
 
 if (action === 'stop') {
   const response = await fetch('/stop');
@@ -340,7 +385,10 @@ if (action === 'stop') {
 
   status.textContent = text;
   await loadButtonState();
-  return;
+ 
+document.body.classList.remove('storm-active');
+
+ return;
 }
 
 if (action === 'reset-stop') {
@@ -388,6 +436,14 @@ if (isCurrentlyOn) {
 setInterval(loadButtonState, 1000);
   loadUser();
   loadButtonState();
+
+const stormIndicator = document.getElementById('stormStatus');
+if (stormIndicator && stormIndicator.textContent.includes('🟢')) {
+  document.body.classList.add('storm-active');
+} else {
+  document.body.classList.remove('storm-active');
+}
+
 </script>
 </body>
 </html>
