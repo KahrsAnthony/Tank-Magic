@@ -17,6 +17,42 @@ const express = require('express');
 const app = express();
 const bcrypt = require('bcrypt');
 
+// ---- Test Log Storage ----
+
+const DATA_DIR = path.join(__dirname, 'data');
+const TEST_LOGS_FILE = path.join(DATA_DIR, 'test-logs.json');
+
+function ensureTestLogsFile() {
+  if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  }
+
+  if (!fs.existsSync(TEST_LOGS_FILE)) {
+    fs.writeFileSync(TEST_LOGS_FILE, '[]', 'utf8');
+  }
+}
+
+function readTestLogs() {
+  try {
+    ensureTestLogsFile();
+    return JSON.parse(fs.readFileSync(TEST_LOGS_FILE, 'utf8'));
+  } catch (err) {
+    console.error('Failed to read test logs:', err.message);
+    return [];
+  }
+}
+
+function writeTestLogs(logs) {
+  try {
+    ensureTestLogsFile();
+    fs.writeFileSync(TEST_LOGS_FILE, JSON.stringify(logs, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Failed to write test logs:', err.message);
+  }
+}
+
+ensureTestLogsFile();
+
 // ---- GPIO / Tank Controls ----
 
 let fogPin = null;
@@ -530,6 +566,53 @@ app.get('/api/tank-status', (req, res) => {
     temperature: null,
     gpioStatus
   });
+});
+
+app.get("/api/test-logs", (req, res) => {
+  const logs = readTestLogs().sort(
+    (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+  );
+
+  res.json(logs);
+});
+
+app.post("/api/test-logs", express.json(), (req, res) => {
+  try {
+    const {
+      ph,
+      highRangePh,
+      ammonia,
+      nitrite,
+      nitrate,
+      ppm,
+      notes = ""
+    } = req.body;
+
+    const newLog = {
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString(),
+
+temperatureF: null,
+waterLevel: "UNKNOWN",
+
+      ph: ph ?? null,
+      highRangePh: highRangePh ?? null,
+      ammonia: ammonia ?? null,
+      nitrite: nitrite ?? null,
+      nitrate: nitrate ?? null,
+      ppm: ppm ?? null,
+      notes: String(notes).trim()
+    };
+
+    const logs = readTestLogs();
+    logs.push(newLog);
+    writeTestLogs(logs);
+
+    res.json({ success: true, log: newLog });
+  } catch (error) {
+    console.error("Failed to save test log:", error);
+    res.status(500).json({ success: false, error: "Failed to save test log" });
+  }
 });
 
 app.get('/drizzle', (req, res) => {

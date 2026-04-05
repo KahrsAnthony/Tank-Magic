@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tank Magic - Water Test Logs</title>
+  <style>
+    :root {
+      --bg-top: #08111f;
+      --bg-bottom: #02060f;
+      --card: rgba(255, 255, 255, 0.08);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --text: #f4f8ff;
+      --muted: rgba(255, 255, 255, 0.75);
+      --input: rgba(255, 255, 255, 0.08);
+      --button: linear-gradient(135deg, #2d6cdf, #1746a2);
+      --button-hover: linear-gradient(135deg, #3a7cff, #2457bf);
+      --danger: #ff6b6b;
+      --warn: #ffd166;
+      --good: #7ae582;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(50, 100, 180, 0.15), transparent 35%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+      padding: 20px;
+    }
+
+    .page {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .title-wrap h1 {
+      margin: 0;
+      font-size: 2rem;
+    }
+
+    .title-wrap p {
+      margin: 6px 0 0;
+      color: var(--muted);
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 18px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    }
+
+    .card h2, .card h3 {
+      margin-top: 0;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: white;
+      background: var(--button);
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn:hover {
+      background: var(--button-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn.secondary {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
+
+    .form-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    label {
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+      input,
+      select,
+      textarea {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid var(--card-border);
+      background: var(--input);
+      color: var(--text);
+      padding: 12px;
+      font: inherit;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+    }
+
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    .meta-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--card-border);
+      border-radius: 999px;
+      padding: 8px 12px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .status-text {
+      min-height: 1.2em;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .log-entry {
+      border-radius: 14px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .log-entry-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .log-entry-header strong {
+      font-size: 1rem;
+    }
+
+    .log-entry-sub {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .reading-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    .reading-box {
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .reading-box-label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .reading-box-value {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+
+    .reading-danger {
+      color: var(--danger);
+    }
+
+    .reading-warn {
+      color: var(--warn);
+    }
+
+    .reading-good {
+      color: var(--good);
+    }
+
+    .empty-state {
+      color: var(--muted);
+      text-align: center;
+      padding: 18px;
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+    }
+
+    .notes {
+      margin-top: 8px;
+      color: var(--muted);
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 14px;
+      }
+
+      .title-wrap h1 {
+        font-size: 1.6rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <div class="title-wrap">
+        <h1>Water Test Logs</h1>
+        <p>Log API Freshwater Master Test Kit results with auto-filled tank data.</p>
+      </div>
+
+      <a class="btn secondary" href="/">← Back to Dashboard</a>
+    </div>
+
+    <section class="card">
+      <h2>Log New Test</h2>
+
+      <div class="meta-preview">
+        <div class="pill" id="previewDate">Date: --</div>
+        <div class="pill" id="previewTemp">Temp: --</div>
+        <div class="pill" id="previewWater">Water Level: --</div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-row">
+          <label for="phInput">pH</label>
+          <select id="phInput">
+            <option value="">--</option>
+            <option value="6">6.0</option>
+            <option value="6.5">6.5</option>
+            <option value="7">7.0</option>
+            <option value="7.5">7.5</option>
+            <option value="8">8.0</option>
+            <option value="8.5">8.5</option>
+            <option value="9">9.0</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="highRangePhInput">High Range pH</label>
+          <select id="highRangePhInput">
+            <option value="">--</option>
+            <option value="7.4">7.4</option>
+            <option value="7.8">7.8</option>
+            <option value="8">8.0</option>
+            <option value="8.2">8.2</option>
+            <option value="8.4">8.4</option>
+            <option value="8.8">8.8</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="ammoniaInput">Ammonia</label>
+          <select id="ammoniaInput">
+            <option value="">--</option>
+            <option value="0">0</option>
+            <option value="0.25">0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="nitriteInput">Nitrite</label>
+          <select id="nitriteInput">
+            <option value="">--</option>
+            <option value="0">0</option>
+            <option value="0.25">0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="5">5</option>
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label for="nitrateInput">Nitrate</label>
+          <select id="nitrateInput">
+            <option value="">--</option>
+            <option value="0">0</option>
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="40">40</option>
+            <option value="80">80</option>
+            <option value="160">160</option>
+          </select>
+        </div>
+
+      <div class="form-row">
+       <label for="ppmInput">PPM / TDS</label>
+       <input id="ppmInput" type="number" min="0" step="1" placeholder="e.g. 180" />
+      </div>
+
+      </div>
+
+      <div class="form-row" style="margin-top: 14px;">
+        <label for="testNotesInput">Notes</label>
+        <textarea id="testNotesInput" placeholder="Optional notes... shrimp behavior, clarity, plants, anything weird."></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn" id="saveTestLogBtn">Save Test Log</button>
+        <button type="button" class="btn secondary" id="refreshLogsBtn" type="button">Refresh Logs</button>
+        <div class="status-text" id="testLogStatus"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Recent Logs</h3>
+      <div id="testLogList" class="log-list"></div>
+    </section>
+  </div>
+
+  <script>
+    function parseNullableNumber(value) {
+      if (value === "" || value == null) return null;
+      const num = Number(value);
+      return Number.isNaN(num) ? null : num;
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function getReadingClass(key, value) {
+      if (value == null) return "";
+
+      if (key === "ammonia" && value > 0) return "reading-danger";
+      if (key === "nitrite" && value > 0) return "reading-danger";
+      if (key === "nitrate" && value >= 40) return "reading-danger";
+      if (key === "nitrate" && value >= 20) return "reading-warn";
+      if (key === "ammonia" && value === 0) return "reading-good";
+      if (key === "nitrite" && value === 0) return "reading-good";
+      if (key === "ppm" && value >= 300) return "reading-warn";
+      if (key === "ppm" && value >= 450) return "reading-danger";
+
+      return "";
+    }
+
+    async function fetchCurrentStatusPreview() {
+      const dateEl = document.getElementById("previewDate");
+      const tempEl = document.getElementById("previewTemp");
+      const waterEl = document.getElementById("previewWater");
+
+      if (dateEl) {
+        dateEl.textContent = "Date: " + new Date().toLocaleString();
+      }
+
+      try {
+        const response = await fetch("/api/status");
+        const status = await response.json();
+
+        const temp =
+          status.temperatureF ??
+          status.tempF ??
+          status.temperature ??
+          null;
+
+        const water =
+          status.waterLevel ??
+          status.waterStatus ??
+          status.level ??
+          (typeof status.water !== "undefined" ? (status.water ? "WET" : "LOW") : null);
+
+        if (tempEl) {
+          tempEl.textContent = "Temp: " + (temp != null ? `${temp}°F` : "--");
+        }
+
+        if (waterEl) {
+          waterEl.textContent = "Water Level: " + (water ?? "--");
+        }
+      } catch (error) {
+        console.error("Failed to fetch preview status:", error);
+        if (tempEl) tempEl.textContent = "Temp: --";
+        if (waterEl) waterEl.textContent = "Water Level: --";
+      }
+    }
+
+    async function fetchTestLogs() {
+      const container = document.getElementById("testLogList");
+
+      try {
+        const response = await fetch("/api/test-logs");
+        const logs = await response.json();
+        renderTestLogs(Array.isArray(logs) ? logs : []);
+      } catch (error) {
+        console.error("Failed to fetch test logs:", error);
+        if (container) {
+          container.innerHTML = '<div class="empty-state">Failed to load logs.</div>';
+        }
+      }
+    }
+
+    function renderTestLogs(logs) {
+      const container = document.getElementById("testLogList");
+      if (!container) return;
+
+      if (!logs.length) {
+        container.innerHTML = '<div class="empty-state">No water test logs yet.</div>';
+        return;
+      }
+
+      container.innerHTML = logs.slice(0, 25).map((log) => {
+        const dateText = log.timestamp
+          ? new Date(log.timestamp).toLocaleString()
+          : "Unknown date";
+
+        const readings = [
+          { key: "ph", label: "pH", value: log.ph },
+          { key: "highRangePh", label: "High pH", value: log.highRangePh },
+          { key: "ammonia", label: "NH3", value: log.ammonia },
+          { key: "nitrite", label: "NO2", value: log.nitrite },
+          { key: "nitrate", label: "NO3", value: log.nitrate }
+          { key: "ppm", label: "PPM", value: log.ppm }
+        ];
+
+        const readingsHtml = readings.map((reading) => `
+          <div class="reading-box">
+            <span class="reading-box-label">${reading.label}</span>
+            <span class="reading-box-value ${getReadingClass(reading.key, reading.value)}">
+              ${reading.value ?? "--"}
+            </span>
+          </div>
+        `).join("");
+
+        return `
+          <div class="log-entry">
+            <div class="log-entry-header">
+              <div>
+                <strong>${dateText}</strong>
+                <div class="log-entry-sub">
+                  Temp: ${log.temperatureF ?? "--"}°F | Water Level: ${log.waterLevel ?? "UNKNOWN"}
+                </div>
+              </div>
+            </div>
+
+            <div class="reading-grid">${readingsHtml}</div>
+
+            ${log.notes ? `<div class="notes">Notes: ${escapeHtml(log.notes)}</div>` : ""}
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function saveTestLog() {
+      const statusEl = document.getElementById("testLogStatus");
+      if (statusEl) statusEl.textContent = "Saving...";
+
+      const payload = {
+        ph: parseNullableNumber(document.getElementById("phInput")?.value),
+        highRangePh: parseNullableNumber(document.getElementById("highRangePhInput")?.value),
+        ammonia: parseNullableNumber(document.getElementById("ammoniaInput")?.value),
+        nitrite: parseNullableNumber(document.getElementById("nitriteInput")?.value),
+        nitrate: parseNullableNumber(document.getElementById("nitrateInput")?.value),
+        ppm: parseNullableNumber(document.getElementById("ppmInput").value),
+        notes: document.getElementById("testNotesInput")?.value?.trim() || ""
+      };
+
+      try {
+        const response = await fetch("/api/test-logs", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Failed to save test log");
+        }
+
+        if (statusEl) statusEl.textContent = "Test log saved.";
+
+        document.getElementById("phInput").value = "";
+        document.getElementById("highRangePhInput").value = "";
+        document.getElementById("ammoniaInput").value = "";
+        document.getElementById("nitriteInput").value = "";
+        document.getElementById("nitrateInput").value = "";
+        document.getElementById("testNotesInput").value = "";
+        document.getElementById("ppmInput").value = "";
+        await fetchCurrentStatusPreview();
+        await fetchTestLogs();
+      } catch (error) {
+        console.error("Failed to save test log:", error);
+        if (statusEl) statusEl.textContent = "Failed to save test log.";
+      }
+    }
+
+    document.getElementById("saveTestLogBtn")?.addEventListener("click", saveTestLog);
+    document.getElementById("refreshLogsBtn")?.addEventListener("click", async () => {
+      await fetchCurrentStatusPreview();
+      await fetchTestLogs();
+    });
+
+    fetchCurrentStatusPreview();
+    fetchTestLogs();
+  </script>
+</body>
+</html>
