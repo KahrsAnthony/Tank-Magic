@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta name="theme-color" content="#0b0d1a"> 
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tank Magic</title>
@@ -223,6 +226,38 @@ body.storm-active .rain {
   background: linear-gradient(90deg, #ff8c42, #2a1205);
 }
 
+.logs {
+  background: linear-gradient(90deg, #1e90ff, #0b0d1a); /* 🔥 matches your system */
+  color: white;
+  border: none;
+  border-radius: 15px;
+  padding: 20px;
+  margin: 15px 0;
+  width: 100%;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;   /* centers horizontally */
+  text-align: center;    /* centers text */
+
+  font-size: 18px;
+  font-weight: bold;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  transition: all 0.2s ease;
+}
+
+.logs .last-pressed {
+  font-size: 14px;
+  font-weight: normal;
+  opacity: 0.8;
+  margin-top: 5px;
+}
+
+.logs:hover {
+  transform: scale(1.02);
+}
+
     #status {
       margin-top: 20px;
       font-size: 14px;
@@ -277,6 +312,11 @@ button div:first-child {
 <button class="feedShrimp" data-control="true" onclick="sendCommand('shrimp', event)">
   <div>🍤 Feed the shrimp! <span id="shrimpStatus">🔴</span></div>
   <div class="last-pressed" id="shrimpLast">Last pressed: never</div>
+</button>
+
+<button class="logs" onclick="location.href='/test-log.html'">
+  <div>📊 Water Test Logs</div>
+  <div class="last-pressed">View and record test data</div>
 </button>
 
 <button class="stop" data-control="true" onclick="sendCommand('stop', event)">

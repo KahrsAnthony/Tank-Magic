@@ -593,7 +593,7 @@ app.post("/api/test-logs", express.json(), (req, res) => {
       timestamp: new Date().toISOString(),
 
 temperatureF: null,
-waterLevel: "UNKNOWN",
+waterLevel: getWaterLevelStatus(),
 
       ph: ph ?? null,
       highRangePh: highRangePh ?? null,

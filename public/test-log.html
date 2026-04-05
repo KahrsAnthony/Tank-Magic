@@ -355,8 +355,6 @@
        <input id="ppmInput" type="number" min="0" step="1" placeholder="e.g. 180" />
       </div>
 
-      </div>
-
       <div class="form-row" style="margin-top: 14px;">
         <label for="testNotesInput">Notes</label>
         <textarea id="testNotesInput" placeholder="Optional notes... shrimp behavior, clarity, plants, anything weird."></textarea>
@@ -413,7 +411,7 @@
       }
 
       try {
-        const response = await fetch("/api/status");
+        const response = await fetch("/api/tank-status");
         const status = await response.json();
 
         const temp =
@@ -426,7 +424,7 @@
           status.waterLevel ??
           status.waterStatus ??
           status.level ??
-          (typeof status.water !== "undefined" ? (status.water ? "WET" : "LOW") : null);
+          (typeof status.water !== "undefined" ? (status.water ? "OKAY" : "LOW") : null);
 
         if (tempEl) {
           tempEl.textContent = "Temp: " + (temp != null ? `${temp}°F` : "--");
@@ -476,7 +474,7 @@
           { key: "highRangePh", label: "High pH", value: log.highRangePh },
           { key: "ammonia", label: "NH3", value: log.ammonia },
           { key: "nitrite", label: "NO2", value: log.nitrite },
-          { key: "nitrate", label: "NO3", value: log.nitrate }
+          { key: "nitrate", label: "NO3", value: log.nitrate },
           { key: "ppm", label: "PPM", value: log.ppm }
         ];
 
