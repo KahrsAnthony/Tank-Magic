@@ -92,9 +92,14 @@ if (Gpio) {
   }
 
   try {
-    waterLevelPin = new Gpio(22, { mode: Gpio.INPUT });
-    gpioStatus.water = true;
-    console.log('waterLevelPin initialized (GPIO22)');
+waterLevelPin = new Gpio(22, {
+  mode: Gpio.INPUT,
+  pullUpDown: Gpio.PUD_UP
+});
+
+gpioStatus.water = !!waterLevelPin.digitalRead();
+console.log('waterLevelPin initialized (GPIO22)');
+console.log('Initial water level raw state:', gpioStatus.water);
   } catch (err) {
     console.error('waterLevelPin init failed:', err.message);
   }
