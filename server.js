@@ -624,6 +624,31 @@ waterLevel: getWaterLevelStatus(),
   }
 });
 
+app.delete('/api/test-logs/:id', (req, res) => {
+  try {
+    const logId = req.params.id;
+
+    if (!fs.existsSync(TEST_LOGS_FILE)) {
+      return res.status(404).json({ error: 'Log file not found' });
+    }
+
+    const raw = fs.readFileSync(TEST_LOGS_FILE, 'utf8');
+    const logs = raw ? JSON.parse(raw) : [];
+
+    const updatedLogs = logs.filter(log => String(log.id) !== String(logId));
+
+    if (updatedLogs.length === logs.length) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    fs.writeFileSync(TEST_LOGS_FILE, JSON.stringify(updatedLogs, null, 2));
+    res.json({ success: true, message: 'Log deleted' });
+  } catch (err) {
+    console.error('Failed to delete log:', err);
+    res.status(500).json({ error: 'Failed to delete log' });
+  }
+});
+
 app.get('/drizzle', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
   logAction(req, 'drizzle', !blocked);

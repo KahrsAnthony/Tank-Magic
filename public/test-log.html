@@ -250,6 +250,21 @@
       white-space: pre-wrap;
     }
 
+.delete-log-btn {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #b91c1c, #7f1d1d);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.delete-log-btn:hover {
+  opacity: 0.9;
+}
+
     @media (max-width: 600px) {
       body {
         padding: 14px;
@@ -513,10 +528,33 @@
             <div class="reading-grid">${readingsHtml}</div>
 
             ${log.notes ? `<div class="notes">Notes: ${escapeHtml(log.notes)}</div>` : ""}
+            ${log.id ? `<button class="delete-log-btn" onclick="deleteLog('${log.id}')">Delete</button>` : ""}
           </div>
         `;
       }).join("");
     }
+
+async function deleteLog(id) {
+  const confirmed = confirm('Delete this log?');
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/test-logs/${id}`, {
+      method: 'DELETE'
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to delete log');
+    }
+
+    await fetchTestLogs();
+  } catch (err) {
+    console.error('Delete failed:', err);
+    alert('Failed to delete log');
+  }
+}
 
     async function saveTestLog() {
       const statusEl = document.getElementById("testLogStatus");
