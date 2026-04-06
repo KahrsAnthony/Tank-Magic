@@ -355,6 +355,16 @@
        <input id="ppmInput" type="number" min="0" step="1" placeholder="e.g. 180" />
       </div>
 
+     <div class="form-row">
+       <label for="khInput">KH (dKH)</label>
+       <input id="khInput" type="number" min="0" step="1" placeholder="e.g. 4" />
+     </div>
+
+     <div class="form-row">
+        <label for="ghInput">GH (dGH)</label>
+        <input id="ghInput" type="number" min="0" step="1" placeholder="e.g. 7" />
+      </div>
+
       <div class="form-row" style="margin-top: 14px;">
         <label for="testNotesInput">Notes</label>
         <textarea id="testNotesInput" placeholder="Optional notes... shrimp behavior, clarity, plants, anything weird."></textarea>
@@ -475,7 +485,9 @@
           { key: "ammonia", label: "NH3", value: log.ammonia },
           { key: "nitrite", label: "NO2", value: log.nitrite },
           { key: "nitrate", label: "NO3", value: log.nitrate },
-          { key: "ppm", label: "PPM", value: log.ppm }
+          { key: "ppm", label: "PPM", value: log.ppm },
+          { key: "kh", label: "KH", value: log.kh },
+          { key: "gh", label: "GH", value: log.gh }
         ];
 
         const readingsHtml = readings.map((reading) => `
@@ -517,6 +529,8 @@
         nitrite: parseNullableNumber(document.getElementById("nitriteInput")?.value),
         nitrate: parseNullableNumber(document.getElementById("nitrateInput")?.value),
         ppm: parseNullableNumber(document.getElementById("ppmInput").value),
+        kh: parseNullableNumber(document.getElementById("khInput").value),
+        gh: parseNullableNumber(document.getElementById("ghInput").value),
         notes: document.getElementById("testNotesInput")?.value?.trim() || ""
       };
 
@@ -544,6 +558,8 @@
         document.getElementById("nitrateInput").value = "";
         document.getElementById("testNotesInput").value = "";
         document.getElementById("ppmInput").value = "";
+        document.getElementById("khInput").value = "";
+        document.getElementById("ghInput").value = "";
         await fetchCurrentStatusPreview();
         await fetchTestLogs();
       } catch (error) {

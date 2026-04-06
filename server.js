@@ -590,6 +590,8 @@ app.post("/api/test-logs", express.json(), (req, res) => {
       nitrite,
       nitrate,
       ppm,
+      kh,
+      gh,
       notes = ""
     } = req.body;
 
@@ -606,6 +608,8 @@ waterLevel: getWaterLevelStatus(),
       nitrite: nitrite ?? null,
       nitrate: nitrate ?? null,
       ppm: ppm ?? null,
+      kh: kh ?? null,
+      gh: gh ?? null,
       notes: String(notes).trim()
     };
 
