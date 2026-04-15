@@ -58,6 +58,10 @@ ensureTestLogsFile();
 let fogPin = null;
 let rainPin = null;
 let waterLevelPin = null;
+let lightningPin = null;
+let lightningTimer = null;
+let rainPlayer = null;
+let thunderTimers = [];
 
 let gpioStatus = {
   fog: false,
@@ -72,6 +76,14 @@ try {
   console.log('pigpio loaded');
 } catch (err) {
   console.error('pigpio load failed:', err.message);
+}
+
+try {
+  lightningPin = new Gpio(23, { mode: Gpio.OUTPUT });
+  lightningPin.digitalWrite(1); // default OFF for active-low relay
+  console.log('lightningPin initialized on GPIO23');
+} catch (err) {
+  console.error('lightningPin init failed:', err.message);
 }
 
 if (Gpio) {
@@ -233,7 +245,151 @@ function stopRain() {
   return { ok: true, message: 'Rain stopped' };
 }
 
-// ----STORM
+// ----Lightning
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function flashLightning(pattern = [60, 40, 100, 30]) {
+  if (!lightningPin) {
+    console.log('⚡ flashLightning skipped: lightningPin not initialized');
+    return;
+  }
+
+  console.log('⚡ FLASH pattern:', pattern);
+
+  for (const duration of pattern) {
+    console.log(`⚡ ON for ${duration}ms`);
+    lightningPin.digitalWrite(0); // ON for active-low relay
+    await sleep(duration);
+
+    console.log('⚡ OFF');
+    lightningPin.digitalWrite(1); // OFF
+    await sleep(40 + Math.floor(Math.random() * 120));
+  }
+   scheduleThunder();
+}
+
+function scheduleLightning() {
+  if (lightningTimer) {
+    clearTimeout(lightningTimer);
+    lightningTimer = null;
+  }
+
+  if (worldState !== 'storm') {
+    console.log(`⚡ scheduleLightning aborted: worldState=${worldState}`);
+    return;
+  }
+
+  const delay = 2000 + Math.floor(Math.random() * 6000);
+  console.log(`⚡ Next lightning strike in ${delay}ms`);
+
+  lightningTimer = setTimeout(async () => {
+    if (worldState !== 'storm') {
+      console.log(`⚡ Lightning cancelled before flash: worldState=${worldState}`);
+      return;
+    }
+
+    const patterns = [
+      [50, 35, 90],
+      [80, 50],
+      [40, 30, 60, 25],
+      [120],
+      [30, 20, 30, 20, 80]
+    ];
+
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    await flashLightning(pattern);
+    scheduleLightning();
+  }, delay);
+}
+
+function stopLightning() {
+  if (lightningTimer) {
+    clearTimeout(lightningTimer);
+    lightningTimer = null;
+  }
+
+  if (lightningPin) {
+    lightningPin.digitalWrite(1);
+  }
+
+  console.log('⚡ Lightning stopped');
+}
+
+// ----Thunder Sounds
+
+function soundPath(file) {
+  return path.join(__dirname, 'sounds', file);
+}
+
+function startRainAmbience() {
+  if (rainPlayer) return;
+
+  rainPlayer = spawn('mpg123', ['-q', '-f', '30000', '--loop', '-1', soundPath('rain-loop.mp3')], {
+     stdio: 'ignore'
+  });
+
+  rainPlayer.on('exit', () => {
+    rainPlayer = null;
+  });
+
+  console.log('🌧️ Rain ambience started');
+}
+
+function stopRainAmbience() {
+  if (!rainPlayer) return;
+
+  rainPlayer.kill('SIGTERM');
+  rainPlayer = null;
+  console.log('🌧️ Rain ambience stopped');
+}
+
+function playThunder() {
+  const thunderFiles = [
+    'thunder1.mp3',
+    'thunder2.mp3',
+    'thunder3.mp3',
+    'thunder-roll1.mp3',
+    'thunder-roll2.mp3'
+  ];
+
+  const file = thunderFiles[Math.floor(Math.random() * thunderFiles.length)];
+
+  const child = spawn('mpg123', ['-q', soundPath(file)], {
+    stdio: 'ignore'
+  });
+
+  child.on('exit', () => {
+    console.log(`🔊 Thunder finished: ${file}`);
+  });
+
+  console.log(`🔊 Thunder started: ${file}`);
+}
+
+function scheduleThunder() {
+  const delay = 500 + Math.floor(Math.random() * 2500);
+
+  console.log(`🔊 Thunder scheduled in ${delay}ms`);
+
+  const timer = setTimeout(() => {
+    thunderTimers = thunderTimers.filter(t => t !== timer);
+
+    if (worldState === 'storm') {
+      playThunder();
+    }
+  }, delay);
+
+  thunderTimers.push(timer);
+}
+
+function clearThunderTimers() {
+  thunderTimers.forEach(clearTimeout);
+  thunderTimers = [];
+}
+
+// ----STORM MODE
 function startStormMode() {
   if (worldState === 'storm') {
     return { ok: false, message: 'Storm already running ⛈️' };
@@ -243,11 +399,25 @@ function startStormMode() {
 
   startDrizzle();
   startRain();
-  startNoise('system');
+  scheduleLightning();
+  startRainAmbience();
 
   console.log('Storm Mode -> ON');
 
   return { ok: true, message: 'Storm Mode started ⛈️' };
+}
+
+function stopStormMode() {
+  stopLightning();
+  stopRainAmbience();
+  clearThunderTimers();
+  stopRain();
+  stopDrizzle();
+  setWorldState('clear');
+
+  console.log('Storm Mode -> OFF');
+
+  return { ok: true, message: 'Storm Mode stopped 🌤️' };
 }
 
 // ---- somehting ----
@@ -317,29 +487,6 @@ function setMomentaryActive(action, username, seconds) {
   writeButtonState(state);
 }
 
-function startNoise(username = 'system') {
-  clearExpiredActions();
-
-  if (isActionActive('noise')) {
-    return { ok: false, message: 'Noise already running 🔊' };
-  }
-
-  if (noiseProcess) {
-    return { ok: false, message: 'Noise already running 🔊' };
-  }
-
-  noiseProcess = spawn('aplay', ['/home/pi/Tank-Magic/sounds/rain.wav']);
-
-  noiseProcess.on('exit', () => {
-    noiseProcess = null;
-  });
-
-  setActionActive('noise', username, 45);
-
-  console.log('🔊 Speaker activated');
-  return { ok: true, message: 'Thunderstorm started 🌧️' };
-}
-
 function randomBetween(minMs, maxMs) {
   return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 }
@@ -359,6 +506,19 @@ function logSystemAction(action, allowed = true) {
   };
 
   fs.appendFileSync('activity.log', JSON.stringify(entry) + '\n');
+}
+
+function stopStormMode() {
+  stopLightning();
+  stopRainAmbience();
+  clearThunderTimers();
+  stopRain();
+  stopDrizzle();
+  setWorldState('clear');
+
+  console.log('Storm Mode -> OFF');
+
+  return { ok: true, message: 'Storm Mode stopped 🌤️' };
 }
 
 function runDrizzleCycle() {
@@ -381,7 +541,9 @@ function runDrizzleCycle() {
 }
 
 function startDrizzle() {
-  worldState = 'drizzle';
+  if (worldState !== 'storm') {
+    worldState = 'drizzle';
+  }
   console.log('Drizzle started');
 }
 
