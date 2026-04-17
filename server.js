@@ -62,6 +62,7 @@ let lightningPin = null;
 let lightningTimer = null;
 let rainPlayer = null;
 let thunderTimers = [];
+let fogCycleTimer = null;
 
 let gpioStatus = {
   fog: false,
@@ -117,17 +118,45 @@ console.log('Initial water level raw state:', gpioStatus.water);
   }
 }
 
-function setFog(on) {
-  try {
-    if (fogPin) {
-      fogPin.digitalWrite(on ? 0 : 1); // active-low relay
-      console.log(on ? 'FOG ON' : 'FOG OFF');
-    } else {
-      console.log(on ? 'FOG ON (simulated)' : 'FOG OFF (simulated)');
+function startFogCycle() {
+  if (fogCycleTimer) return;
+
+  console.log('🌫️ Fog cycle started');
+
+  let fogOn = false;
+
+  function toggleFog() {
+    if (worldState !== 'storm') {
+      fogCycleTimer = null;
+      if (fogPin) fogPin.digitalWrite(1);
+      return;
     }
-  } catch (err) {
-    console.log('Fog write failed:', err.message);
+
+    fogOn = !fogOn;
+
+    if (fogPin) {
+      fogPin.digitalWrite(fogOn ? 0 : 1);
+    }
+
+    console.log(`🌫️ Fog ${fogOn ? 'ON' : 'OFF'}`);
+
+    fogCycleTimer = setTimeout(toggleFog, 10000);
   }
+
+  toggleFog();
+}
+
+function stopFogCycle() {
+  if (fogCycleTimer) {
+    clearTimeout(fogCycleTimer);
+    fogCycleTimer = null;
+  }
+
+  if (fogPin) {
+    fogPin.digitalWrite(1); // force OFF
+  }
+
+  console.log('🌫️ Fog cycle stopped');
 }
 
 function setRain(on) {
@@ -152,8 +181,7 @@ function getWaterLevelStatus() {
   } catch (err) {
     console.log('Error reading water level pin:', err.message);
     return 'READ ERROR';
-  }
-}
+  }}
 
 // ---- Weather State ----
 
@@ -166,59 +194,12 @@ function randomBetween(minMs, maxMs) {
   return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
 }
 
-function clearDrizzleTimeout() {
-  if (drizzleTimeout) {
-    clearTimeout(drizzleTimeout);
-    drizzleTimeout = null;
-  }
-}
-
 function setWorldState(newState) {
   worldState = newState;
   console.log(`World state -> ${worldState}`);
 }
 
-function runDrizzleCycle() {
-  if (!drizzleActive) return;
-
-  const fogOnTime = randomBetween(7000, 14000);
-  const fogOffTime = randomBetween(5000, 12000);
-
-  setFog(true);
-  console.log(`Drizzle fog ON for ${fogOnTime}ms`);
-
-  drizzleTimeout = setTimeout(() => {
-    setFog(false);
-    console.log(`Drizzle fog OFF for ${fogOffTime}ms`);
-
-    drizzleTimeout = setTimeout(() => {
-      runDrizzleCycle();
-    }, fogOffTime);
-  }, fogOnTime);
-}
-
 // ---Drizzle
-function startDrizzle() {
-  if (drizzleActive) {
-    return { ok: false, message: 'Drizzle already running 🌫️' };
-  }
-
-  clearDrizzleTimeout();
-  drizzleActive = true;
-  console.log('Drizzle effect -> ON');
-  runDrizzleCycle();
-
-  return { ok: true, message: 'Drizzle started 🌫️' };
-}
-
-function stopDrizzle() {
-  clearDrizzleTimeout();
-  drizzleActive = false;
-  setFog(false);
-  console.log('Drizzle effect -> OFF');
-
-  return { ok: true, message: 'Drizzle stopped' };
-}
 
 // --- Rain
 function startRain() {
@@ -397,10 +378,10 @@ function startStormMode() {
 
   setWorldState('storm');
 
-  startDrizzle();
   startRain();
   scheduleLightning();
   startRainAmbience();
+  startFogCycle();
 
   console.log('Storm Mode -> ON');
 
@@ -412,7 +393,7 @@ function stopStormMode() {
   stopRainAmbience();
   clearThunderTimers();
   stopRain();
-  stopDrizzle();
+  stopFogCycle();
   setWorldState('clear');
 
   console.log('Storm Mode -> OFF');
@@ -441,8 +422,8 @@ app.use(session({
   }
 }));
 
-process.on('SIGTERM', () => { try { setFog(false); } catch {} try { fogPin.unexport(); } catch {} process.exit(0); });
-process.on('SIGINT',  () => { try { setFog(false); } catch {} try { fogPin.unexport(); } catch {} process.exit(0); });
+process.on('SIGTERM', () => { try { fogPin.digitalWrite(1); } catch {} try { fogPin.unexport(); } catch {} process.exit(0); });
+process.on('SIGINT',  () => { try { fogPin.digitalWrite(1); } catch {} try { fogPin.unexport(); } catch {} process.exit(0); });
 
 const PORT = 3000;
 const STATE_FILE = 'button-state.json';
@@ -450,10 +431,10 @@ const STATE_FILE = 'button-state.json';
 setInterval(() => {
   if (worldState === 'drizzle') {
     console.log('World state is drizzle, triggering fog');
-    setFog(true);
+    if (fogPin) fogPin.digitalWrite(0);
 
     setTimeout(() => {
-      setFog(false);
+    if (fogPin) fogPin.digitalWrite(1);
       console.log('Fog OFF after drizzle pulse');
     }, 10000);
   }
@@ -482,7 +463,7 @@ function setMomentaryActive(action, username, seconds) {
     time: now.toISOString(),
     user: username,
     activeUntil: activeUntil.toISOString()
-  };
+};
 
   writeButtonState(state);
 }
@@ -527,11 +508,11 @@ function runDrizzleCycle() {
   const fogOnTime = randomBetween(7000, 14000);   // 7–14 sec on
   const fogOffTime = randomBetween(5000, 12000);  // 5–12 sec off
 
-  setFog(true);
+  if (fogPin) fogPin.digitalWrite(0);
   console.log(`Drizzle fog ON for ${fogOnTime}ms`);
 
   drizzleTimeout = setTimeout(() => {
-    setFog(false);
+    if (fogPin) fogPin.digitalWrite(1);
     console.log(`Drizzle fog OFF for ${fogOffTime}ms`);
 
     drizzleTimeout = setTimeout(() => {
@@ -549,7 +530,7 @@ function startDrizzle() {
 
 function stopDrizzle() {
   worldState = 'clear';
-  setFog(false);
+  if (fogPin) fogPin.digitalWrite(1);
   console.log('Drizzle stopped');
 }
 
