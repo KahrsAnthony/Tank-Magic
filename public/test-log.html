@@ -294,6 +294,7 @@
         <div class="pill" id="previewDate">Date: --</div>
         <div class="pill" id="previewTemp">Temp: --</div>
         <div class="pill" id="previewWater">Water Level: --</div>
+        <div class="pill" id="previewDose">Dosed: --</div>
       </div>
 
       <div class="form-grid">
@@ -308,6 +309,7 @@
             <option value="8">8.0</option>
             <option value="8.5">8.5</option>
             <option value="9">9.0</option>
+            <option value="N/T">No Test</option>
           </select>
         </div>
 
@@ -321,6 +323,7 @@
             <option value="8.2">8.2</option>
             <option value="8.4">8.4</option>
             <option value="8.8">8.8</option>
+            <option value="N/T">No Test</option>
           </select>
         </div>
 
@@ -335,6 +338,7 @@
             <option value="2">2</option>
             <option value="4">4</option>
             <option value="8">8</option>
+            <option value="N/T">No Test</option>
           </select>
         </div>
 
@@ -348,6 +352,7 @@
             <option value="1">1</option>
             <option value="2">2</option>
             <option value="5">5</option>
+            <option value="N/T">No Test</option>
           </select>
         </div>
 
@@ -362,6 +367,7 @@
             <option value="40">40</option>
             <option value="80">80</option>
             <option value="160">160</option>
+            <option value="N/T">No Test</option>
           </select>
         </div>
 
@@ -430,6 +436,7 @@
       const dateEl = document.getElementById("previewDate");
       const tempEl = document.getElementById("previewTemp");
       const waterEl = document.getElementById("previewWater");
+      const doseEl = document.getElementById("previewDose");
 
       if (dateEl) {
         dateEl.textContent = "Date: " + new Date().toLocaleString();
@@ -451,6 +458,16 @@
           status.level ??
           (typeof status.water !== "undefined" ? (status.water ? "OKAY" : "LOW") : null);
 
+        const lastDose =
+  status.lastPressed?.dose ??
+  status.lastDose ??
+  status.doseLast ??
+  null;
+
+const dosedToday =
+  lastDose &&
+  new Date(lastDose).toDateString() === new Date().toDateString();
+
         if (tempEl) {
           tempEl.textContent = "Temp: " + (temp != null ? `${temp}°F` : "--");
         }
@@ -458,11 +475,17 @@
         if (waterEl) {
           waterEl.textContent = "Water Level: " + (water ?? "--");
         }
+
+if (doseEl) {
+  doseEl.textContent = "Dosed: " + (dosedToday ? "Yes" : "No");
+}
+
       } catch (error) {
         console.error("Failed to fetch preview status:", error);
         if (tempEl) tempEl.textContent = "Temp: --";
         if (waterEl) waterEl.textContent = "Water Level: --";
-      }
+        if (doseEl) doseEl.textContent = "Dosed: --"; 
+     }
     }
 
     async function fetchTestLogs() {

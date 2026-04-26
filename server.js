@@ -824,6 +824,7 @@ if (isEStopActive()) {
   res.send('Rain cycle started');
 });
 
+//---Plant Feeding Log
 app.get('/dose', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
   logAction(req, 'dose', !blocked);
@@ -833,10 +834,9 @@ app.get('/dose', (req, res) => {
   }
 
   updateLastPressed('dose', req.session.user.username);
-  setMomentaryActive('dose', req.session.user.username, 10);
 
-  console.log('🌱 Dosing system activated');
-  res.send('Plant food added');
+  console.log('🌱 Plant dose logged');
+  res.send('Plant dose logged');
 });
 
 app.get('/storm', (req, res) => {
