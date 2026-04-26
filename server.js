@@ -57,7 +57,6 @@ ensureTestLogsFile();
 // ---- GPIO / Tank Controls ----
 
 let fogPin = null;
-let rainPin = null;
 let waterLevelPin = null;
 let lightningPin = null;
 let lightningTimer = null;
@@ -67,7 +66,6 @@ let fogCycleTimer = null;
 
 let gpioStatus = {
   fog: false,
-  rain: false,
   water: false
 };
 
@@ -98,23 +96,15 @@ if (Gpio) {
   }
 
   try {
-    rainPin = new Gpio(27, { mode: Gpio.OUTPUT });
-    gpioStatus.rain = true;
-    console.log('rainPin initialized (GPIO27)');
-  } catch (err) {
-    console.error('rainPin init failed:', err.message);
-  }
-
-  try {
-waterLevelPin = new Gpio(22, {
-  mode: Gpio.INPUT,
-  pullUpDown: Gpio.PUD_UP
+    waterLevelPin = new Gpio(22, {
+    mode: Gpio.INPUT,
+    pullUpDown: Gpio.PUD_UP
 });
 
-gpioStatus.water = !!waterLevelPin.digitalRead();
-console.log('waterLevelPin initialized (GPIO22)');
-console.log('Initial water level raw state:', gpioStatus.water);
-  } catch (err) {
+    gpioStatus.water = !!waterLevelPin.digitalRead();
+    console.log('waterLevelPin initialized (GPIO22)');
+    console.log('Initial water level raw state:', gpioStatus.water);
+ } catch (err) {
     console.error('waterLevelPin init failed:', err.message);
   }
 }
@@ -160,19 +150,6 @@ function stopFogCycle() {
   console.log('🌫️ Fog cycle stopped');
 }
 
-function setRain(on) {
-  try {
-    if (rainPin) {
-      rainPin.digitalWrite(on ? 0 : 1); // active-low relay
-      console.log(on ? 'RAIN ON' : 'RAIN OFF');
-    } else {
-      console.log(on ? 'RAIN ON (simulated)' : 'RAIN OFF (simulated)');
-    }
-  } catch (err) {
-    console.log('Rain write failed:', err.message);
-  }
-}
-
 function getWaterLevelStatus() {
   if (!waterLevelPin) return 'GPIO OFFLINE';
 
@@ -187,7 +164,6 @@ function getWaterLevelStatus() {
 // ---- Weather State ----
 
 let drizzleActive = false;
-let rainActive = false;
 let worldState = 'clear'; // clear | drizzle | storm
 let drizzleTimeout = null;
 
@@ -198,33 +174,6 @@ function randomBetween(minMs, maxMs) {
 function setWorldState(newState) {
   worldState = newState;
   console.log(`World state -> ${worldState}`);
-}
-
-// ---Drizzle
-
-// --- Rain
-function startRain() {
-  if (rainActive) {
-    return { ok: false, message: 'Rain already running' };
-  }
-
-  rainActive = true;
-  setRain(true);
-  console.log('Rain effect -> ON');
-
-  return { ok: true, message: 'Rain started 🌧️' };
-}
-
-function stopRain() {
-  if (!rainActive) {
-    return { ok: false, message: 'Rain already stopped' };
-  }
-
-  rainActive = false;
-  setRain(false);
-  console.log('Rain effect -> OFF');
-
-  return { ok: true, message: 'Rain stopped' };
 }
 
 // ----Lightning
@@ -379,7 +328,6 @@ function startStormMode() {
 
   setWorldState('storm');
 
-  startRain();
   scheduleLightning();
   startRainAmbience();
   startFogCycle();
@@ -406,7 +354,6 @@ function stopStormMode() {
   stopLightning();
   stopRainAmbience();
   clearThunderTimers();
-  stopRain();
   stopFogCycle();
   setWorldState('clear');
 
@@ -800,30 +747,6 @@ app.get('/drizzle', (req, res) => {
   return res.send(result.message);
 });
 
-app.get('/rain', (req, res) => {
-  const blocked = !req.session.user || req.session.user.role === 'viewer';
-
-  logAction(req, 'rain', !blocked);
-
-  if (blocked) {
-    return res.send('Viewer cannot control system');
-}
-if (isEStopActive()) {
-  return res.send('E-stop is active. Admin must reset the system.');
-}
-
-  clearExpiredActions();
-
-  if (isActionActive('rain')) {
-    return res.send('Rain is already running 🌧️');
-  }
-
-  setActionActive('rain', req.session.user.username, 45);
-
-  console.log('🌧️ Water valve activated');
-  res.send('Rain cycle started');
-});
-
 //---Plant Feeding Log
 app.get('/dose', (req, res) => {
   const blocked = !req.session.user || req.session.user.role === 'viewer';
@@ -937,10 +860,6 @@ function setEStop(username) {
     time: new Date().toISOString(),
     user: username
   };
-
-  if (state.rain) {
-    delete state.rain.activeUntil;
-  }
 
   if (state.noise) {
     delete state.noise.activeUntil;
