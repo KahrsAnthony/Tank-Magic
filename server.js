@@ -163,9 +163,7 @@ function getWaterLevelStatus() {
 
 // ---- Weather State ----
 
-let drizzleActive = false;
-let worldState = 'clear'; // clear | drizzle | storm
-let drizzleTimeout = null;
+let worldState = 'clear'; // clear | storm
 
 function randomBetween(minMs, maxMs) {
   return Math.floor(Math.random() * (maxMs - minMs + 1)) + minMs;
@@ -389,24 +387,11 @@ process.on('SIGINT',  () => { try { fogPin.digitalWrite(1); } catch {} try { fog
 const PORT = 3000;
 const STATE_FILE = 'button-state.json';
 
-setInterval(() => {
-  if (worldState === 'drizzle') {
-    console.log('World state is drizzle, triggering fog');
-    if (fogPin) fogPin.digitalWrite(0);
-
-    setTimeout(() => {
-    if (fogPin) fogPin.digitalWrite(1);
-      console.log('Fog OFF after drizzle pulse');
-    }, 10000);
-  }
-}, 30000);
-
 function readButtonState() {
   try {
     return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
   } catch (err) {
     return {
-      rain: null,
       dose: null,
       noise: null,
       shrimp: null,
@@ -448,25 +433,6 @@ function logSystemAction(action, allowed = true) {
   };
 
   fs.appendFileSync('activity.log', JSON.stringify(entry) + '\n');
-}
-
-function runDrizzleCycle() {
-  if (!drizzleActive) return;
-
-  const fogOnTime = randomBetween(7000, 14000);   // 7–14 sec on
-  const fogOffTime = randomBetween(5000, 12000);  // 5–12 sec off
-
-  if (fogPin) fogPin.digitalWrite(0);
-  console.log(`Drizzle fog ON for ${fogOnTime}ms`);
-
-  drizzleTimeout = setTimeout(() => {
-    if (fogPin) fogPin.digitalWrite(1);
-    console.log(`Drizzle fog OFF for ${fogOffTime}ms`);
-
-    drizzleTimeout = setTimeout(() => {
-      runDrizzleCycle();
-    }, fogOffTime);
-  }, fogOnTime);
 }
 
 function checkScheduledStorm() {
@@ -725,26 +691,6 @@ app.delete('/api/test-logs/:id', (req, res) => {
     console.error('Failed to delete log:', err);
     res.status(500).json({ error: 'Failed to delete log' });
   }
-});
-
-app.get('/drizzle', (req, res) => {
-  const blocked = !req.session.user || req.session.user.role === 'viewer';
-  logAction(req, 'drizzle', !blocked);
-
-  if (blocked) {
-    return res.send('Viewer cannot control system');
-  }
-
-  if (isEStopActive()) {
-    return res.send('E-stop is active. Admin must reset the system.');
-  }
-
-  const result =
-    worldState === 'drizzle'
-      ? stopDrizzle()
-      : startDrizzle();
-
-  return res.send(result.message);
 });
 
 //---Plant Feeding Log
