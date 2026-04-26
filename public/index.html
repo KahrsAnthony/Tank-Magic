@@ -300,7 +300,7 @@ button div:first-child {
 </div>
 
 <button class="rain" data-control="true" onclick="sendCommand('storm', event)">
- <div>⛈️ Storm Mode <span id="stormStatus">🔴</span></div>
+  <div>⛈️ Storm Mode <span id="stormStatus">🔴</span> <span id="stormTimer"></span></div>
   <div class="last-pressed" id="stormLast">Storm inactive</div>
 </button>
 
@@ -348,6 +348,7 @@ const lastPressedMap = {
   stop: 'stopLast'
 };
 
+let stormInterval = null;
 let currentUserRole = null;
 
   async function loadUser() {
@@ -600,20 +601,62 @@ if (button) {
       }
     }
 
-    if (action === 'storm') {
-      const response = await fetch('/storm');
-      const text = await response.text();
-      status.textContent = text;
+if (action === 'storm') {
 
-      if (text.toLowerCase().includes('stopped') || text.toLowerCase().includes('off')) {
-        document.body.classList.remove('storm-active');
-      } else {
-        document.body.classList.add('storm-active');
-      }
+// TOGGLE OFF if already running
+if (stormInterval) {
+  clearInterval(stormInterval);
+  stormInterval = null;
 
-      await loadButtonState();
+  const stormEl = document.getElementById('stormStatus');
+  const timerEl = document.getElementById('stormTimer');
+
+  if (stormEl) stormEl.textContent = '🔴';
+  if (timerEl) timerEl.textContent = '';
+  document.body.classList.remove('storm-active');
+
+  const response = await fetch('/storm');
+  const text = await response.text();
+  status.textContent = text;
+  return;
+}
+  const response = await fetch('/storm');
+  const text = await response.text();
+  status.textContent = text;
+
+  const stormEl = document.getElementById('stormStatus');
+  const timerEl = document.getElementById('stormTimer');
+
+  if (stormEl) stormEl.textContent = '🟢';
+
+  let timeLeft = 15 * 60;
+
+if (stormInterval) clearInterval(stormInterval);
+
+stormInterval = setInterval(() => {
+    if (timeLeft <= 0) {
+clearInterval(stormInterval);
+stormInterval = null;
+      if (stormEl) stormEl.textContent = '🔴';
+      if (timerEl) timerEl.textContent = '';
+      document.body.classList.remove('storm-active');
       return;
     }
+
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+
+    if (timerEl) {
+      timerEl.textContent = ` (${minutes}:${seconds.toString().padStart(2, '0')})`;
+    }
+
+    timeLeft--;
+  }, 1000);
+
+  document.body.classList.add('storm-active');
+  await loadButtonState();
+  return;
+}
 
 if (action === 'stop') {
   const response = await fetch('/stop');
@@ -625,6 +668,16 @@ if (action === 'stop') {
   document.getElementById('stopStatus').textContent = '🔴';
 
   status.textContent = text;
+if (stormInterval) {
+  clearInterval(stormInterval);
+  stormInterval = null;
+}
+
+const timerEl = document.getElementById('stormTimer');
+if (timerEl) timerEl.textContent = '';
+
+document.body.classList.remove('storm-active');
+
   await loadButtonState();
  
 document.body.classList.remove('storm-active');
@@ -642,14 +695,6 @@ if (action === 'reset-stop') {
 
 const indicatorId = statusMap[action];
 const indicator = document.getElementById(indicatorId);
-
-if (action === 'storm') {
-  const response = await fetch('/storm');
-  const text = await response.text();
-  status.textContent = text;
-  await loadButtonState();
-  return;
-}
 
 if (!indicator) {
   status.textContent = 'Unknown control';
