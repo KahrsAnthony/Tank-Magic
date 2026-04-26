@@ -8,6 +8,7 @@ const SCHEDULED_STORM_HOUR = 20;
 const SCHEDULED_STORM_MINUTE = 0;
 
 let lastScheduledStormRun = null;
+let stormStopTimer = null;
 
 const fs = require('fs');
 const session = require('express-session');
@@ -383,12 +384,25 @@ function startStormMode() {
   startRainAmbience();
   startFogCycle();
 
+// auto-stop after 15 minutes
+  if (stormStopTimer) clearTimeout(stormStopTimer);
+  stormStopTimer = setTimeout(() => {
+    console.log('Storm auto-stopping after 15 minutes');
+    stopStormMode();
+    stormStopTimer = null;
+  }, 15 * 60 * 1000);
+
   console.log('Storm Mode -> ON');
 
   return { ok: true, message: 'Storm Mode started ⛈️' };
 }
 
 function stopStormMode() {
+   if (stormStopTimer) {
+     clearTimeout(stormStopTimer);
+     stormStopTimer = null;
+   }
+
   stopLightning();
   stopRainAmbience();
   clearThunderTimers();
@@ -489,19 +503,6 @@ function logSystemAction(action, allowed = true) {
   fs.appendFileSync('activity.log', JSON.stringify(entry) + '\n');
 }
 
-function stopStormMode() {
-  stopLightning();
-  stopRainAmbience();
-  clearThunderTimers();
-  stopRain();
-  stopDrizzle();
-  setWorldState('clear');
-
-  console.log('Storm Mode -> OFF');
-
-  return { ok: true, message: 'Storm Mode stopped 🌤️' };
-}
-
 function runDrizzleCycle() {
   if (!drizzleActive) return;
 
@@ -521,28 +522,15 @@ function runDrizzleCycle() {
   }, fogOnTime);
 }
 
-function startDrizzle() {
-  if (worldState !== 'storm') {
-    worldState = 'drizzle';
-  }
-  console.log('Drizzle started');
-}
-
-function stopDrizzle() {
-  worldState = 'clear';
-  if (fogPin) fogPin.digitalWrite(1);
-  console.log('Drizzle stopped');
-}
-
 function checkScheduledStorm() {
   const now = new Date();
 
   const runKey = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}`;
 
   if (
-    now.getHours() === SCHEDULED_NOISE_HOUR &&
-    now.getMinutes() === SCHEDULED_NOISE_MINUTE &&
-    lastScheduledNoiseRun !== runKey
+    now.getHours() === SCHEDULED_STOMR_HOUR &&
+    now.getMinutes() === SCHEDULED_STORM_MINUTE &&
+    lastScheduledStormRun !== runKey
   ) {
     const result = startStormMode();
 
